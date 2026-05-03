@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nine2Five — Māori Socks, New Zealand</title>
+  <script src="https://js.stripe.com/v3/"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
@@ -643,6 +644,33 @@
       .collection-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
     }
 
+    /* ── BUY BUTTON ── */
+    .buy-btn {
+      background: white;
+      color: var(--fg);
+      border: none;
+      padding: 0.35rem 0.85rem;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: background 0.2s, transform 0.15s, opacity 0.2s;
+      white-space: nowrap;
+    }
+    .buy-btn:hover { background: var(--accent); color: white; transform: translateY(-1px); }
+    .buy-btn:active { transform: scale(0.97); }
+    .buy-btn:disabled { opacity: 0.6; cursor: wait; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(4px);
+      background: var(--fg); color: white; padding: 0.75rem 1.5rem;
+      border-radius: 100px; font-size: 0.85rem; font-weight: 500;
+      opacity: 0; transition: opacity 0.3s, transform 0.3s; z-index: 200; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
     /* ── KORU SVG PATTERN ── */
     .koru-bg {
       position: absolute;
@@ -746,7 +774,10 @@
               <h3>Koru Rising</h3>
               <p>Koru Collection</p>
             </div>
-            <div class="product-price">$29</div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div class="product-price">$29</div>
+              <button class="buy-btn" data-name="Koru Rising Socks" data-price="29" data-img="https://picsum.photos/seed/n2f-koru/600/800">Buy</button>
+            </div>
           </div>
         </div>
         <div class="product-card" data-animate>
@@ -756,7 +787,10 @@
               <h3>Tīki Totem</h3>
               <p>Heritage Series</p>
             </div>
-            <div class="product-price">$27</div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div class="product-price">$27</div>
+              <button class="buy-btn" data-name="Tīki Totem Socks" data-price="27" data-img="https://picsum.photos/seed/n2f-tiki/400/320">Buy</button>
+            </div>
           </div>
         </div>
         <div class="product-card" data-animate>
@@ -767,7 +801,10 @@
               <h3>Awa Flow</h3>
               <p>River Series</p>
             </div>
-            <div class="product-price">$27</div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div class="product-price">$27</div>
+              <button class="buy-btn" data-name="Awa Flow Socks" data-price="27" data-img="https://picsum.photos/seed/n2f-awa/400/320">Buy</button>
+            </div>
           </div>
         </div>
         <div class="product-card" data-animate>
@@ -777,7 +814,10 @@
               <h3>Tāmoko Lines</h3>
               <p>Tattoo Series</p>
             </div>
-            <div class="product-price">$29</div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div class="product-price">$29</div>
+              <button class="buy-btn" data-name="Tāmoko Lines Socks" data-price="29" data-img="https://picsum.photos/seed/n2f-moko/400/320">Buy</button>
+            </div>
           </div>
         </div>
         <div class="product-card" data-animate>
@@ -787,7 +827,10 @@
               <h3>Rangi Sky</h3>
               <p>Sky &amp; Earth Series</p>
             </div>
-            <div class="product-price">$27</div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div class="product-price">$27</div>
+              <button class="buy-btn" data-name="Rangi Sky Socks" data-price="27" data-img="https://picsum.photos/seed/n2f-rangi/400/320">Buy</button>
+            </div>
           </div>
         </div>
       </div>
@@ -933,6 +976,67 @@
         document.querySelectorAll('.gift-amount').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
       });
+    });
+
+    // Stripe checkout
+    const PUBLISHABLE_KEY = 'pk_live_51QQHA4CA9Ax2EtslOBniEN9i6ATir27Y4geLt4w5bkGC4IKW5G6CE6vpBG9gx1o27DvtjN20MFnG7MJdtOC66ts900FR0eil8l';
+    const stripe = Stripe(PUBLISHABLE_KEY);
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    document.querySelectorAll('.buy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const name = btn.dataset.name;
+        const price = parseFloat(btn.dataset.price);
+        const img = btn.dataset.img;
+
+        btn.disabled = true;
+        btn.textContent = 'Loading...';
+
+        try {
+          const res = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productName: name, priceNZD: price, imageUrl: img }),
+          });
+
+          if (!res.ok) throw new Error('Checkout error');
+          const { url } = await res.json();
+          window.location.href = url;
+        } catch (err) {
+          showToast('Something went wrong. Please try again.');
+          btn.disabled = false;
+          btn.textContent = 'Buy';
+        }
+      });
+    });
+
+    // Gift card buy
+    document.querySelector('.gift-content .btn-primary').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const amount = parseInt(document.querySelector('.gift-amount.active').textContent.replace('$', ''));
+      const btn = e.currentTarget;
+      btn.textContent = 'Loading...';
+      try {
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productName: `Nine2Five Gift Card — $${amount} NZD`, priceNZD: amount }),
+        });
+        const { url } = await res.json();
+        window.location.href = url;
+      } catch {
+        showToast('Something went wrong. Please try again.');
+        btn.textContent = 'Buy a Gift Card';
+      }
     });
   </script>
 
