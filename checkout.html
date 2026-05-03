@@ -199,7 +199,7 @@
             </div>
             <div class="field-wrap">
               <label class="field-label" for="city">City / Town</label>
-              <input class="field-input" id="city" type="text" placeholder="Auckland" autocomplete="address-level2">
+              <input class="field-input" id="city" type="text" placeholder="Auckland" autocomplete="address-level2" id="city">
             </div>
           </div>
           <div class="field-row">
@@ -323,28 +323,56 @@
       }
     }
 
-    // ── AddressFinder autocomplete ──
+    // ── AddressFinder autocomplete (NZ + AU) ──
+    let afWidget = null;
+
     function initAddressFinder() {
-      // Waits for the script to load then attaches the widget
       function attach() {
         if (typeof AddressFinder === 'undefined') { setTimeout(attach, 200); return; }
-        const widget = new AddressFinder.Widget(
-          document.getElementById('address-line1'),
-          'DEMO', // Replace with your AddressFinder API key from addressfinder.nz
-          'NZ',
-          { show_addresses: true, address_params: {} }
-        );
-        widget.on('result:select', function(fullAddress, meta) {
-          document.getElementById('address-line1').value = meta.address_line_1 || meta.address_line1 || '';
-          document.getElementById('suburb').value      = meta.suburb || '';
-          document.getElementById('city').value        = meta.city || '';
-          document.getElementById('postcode').value    = meta.postcode || '';
-          document.getElementById('country').value     = 'NZ';
-          // Move focus to apartment field
-          document.getElementById('address-line2').focus();
-        });
+        mountWidget(document.getElementById('country').value);
       }
       attach();
+
+      // Re-mount when country changes
+      document.getElementById('country').addEventListener('change', function() {
+        mountWidget(this.value);
+        // Clear address fields when switching country
+        ['address-line1','address-line2','suburb','city','postcode'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+      });
+    }
+
+    function mountWidget(country) {
+      // AddressFinder only supports NZ and AU
+      if (country !== 'NZ' && country !== 'AU') {
+        if (afWidget) { afWidget.destroy(); afWidget = null; }
+        return;
+      }
+      if (afWidget) { afWidget.destroy(); afWidget = null; }
+
+      afWidget = new AddressFinder.Widget(
+        document.getElementById('address-line1'),
+        'DEMO', // Replace with your AddressFinder API key from addressfinder.nz
+        country,
+        { show_addresses: true, address_params: {} }
+      );
+
+      afWidget.on('result:select', function(fullAddress, meta) {
+        if (country === 'NZ') {
+          document.getElementById('address-line1').value = meta.address_line_1 || meta.address_line1 || '';
+          document.getElementById('suburb').value        = meta.suburb || '';
+          document.getElementById('city').value          = meta.city || '';
+          document.getElementById('postcode').value      = meta.postcode || '';
+        } else {
+          // AU metadata field names
+          document.getElementById('address-line1').value = meta.address_line_1 || meta.address_line1 || '';
+          document.getElementById('suburb').value        = meta.locality_name || meta.suburb || '';
+          document.getElementById('city').value          = meta.locality_name || meta.city || '';
+          document.getElementById('postcode').value      = meta.postcode || '';
+        }
+        document.getElementById('address-line2').focus();
+      });
     }
 
     // ── Submit ──
