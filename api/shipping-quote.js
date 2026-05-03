@@ -19,10 +19,10 @@ const INTERNATIONAL = {
 };
 
 function nzRate(qty) {
-  if (qty <= 2)  return { service: 'Standard — DLE (up to 2 pairs)',   price: 6.00  };
-  if (qty <= 5)  return { service: 'Standard — A5 (up to 5 pairs)',    price: 7.00  };
-  if (qty <= 24) return { service: 'Standard — A4 (up to 24 pairs)',   price: 9.00  };
-                 return { service: 'Standard — Lineflow (25+ pairs)',   price: 16.00 };
+  if (qty <= 2) return { service: 'Standard — DLE (up to 2 pairs)',  price: 6.00  };
+  if (qty === 3) return { service: 'Standard — A5 (3 pairs)',         price: 7.00  };
+  if (qty <= 6) return { service: 'Standard — A4 (4–6 pairs)',        price: 9.00  };
+                return { service: 'Standard — Lineflow (7+ pairs)',    price: 16.00 };
 }
 
 module.exports = async function handler(req, res) {
