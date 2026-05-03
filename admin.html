@@ -154,6 +154,48 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-row { text-align: center; padding: 3rem; }
+
+    /* ── POS MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(26,23,20,0.5); backdrop-filter: blur(4px);
+      z-index: 200; display: none; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: 1.5rem; padding: 2rem;
+      width: 100%; max-width: 560px; max-height: 90dvh; overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.15);
+    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .modal-header h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.03em; }
+    .modal-close { background: none; border: 1px solid var(--border); border-radius: 100px; width: 32px; height: 32px; cursor: pointer; font-size: 1rem; color: var(--muted); transition: all 0.2s; }
+    .modal-close:hover { border-color: var(--fg); color: var(--fg); }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .form-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-input {
+      padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 0.75rem;
+      font-family: var(--font); font-size: 0.9rem; background: var(--bg); color: var(--fg);
+      outline: none; transition: border-color 0.2s; width: 100%;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .pos-items { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
+    .pos-item {
+      display: grid; grid-template-columns: 1fr 1fr 60px 28px; gap: 0.5rem; align-items: center;
+    }
+    .pos-item select, .pos-item input { padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 0.6rem; font-family: var(--font); font-size: 0.85rem; background: var(--bg); color: var(--fg); outline: none; }
+    .pos-item select:focus, .pos-item input:focus { border-color: var(--accent); }
+    .remove-item-btn { background: none; border: 1px solid var(--border); border-radius: 0.5rem; color: var(--muted); cursor: pointer; font-size: 0.9rem; height: 34px; transition: all 0.2s; }
+    .remove-item-btn:hover { border-color: var(--red); color: var(--red); }
+    .add-item-btn { background: none; border: 1px dashed var(--border); border-radius: 0.75rem; padding: 0.6rem; width: 100%; font-family: var(--font); font-size: 0.85rem; color: var(--muted); cursor: pointer; transition: all 0.2s; margin-bottom: 1rem; }
+    .add-item-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .pos-total { background: var(--bg); border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.95rem; font-weight: 700; text-align: right; margin-bottom: 1.25rem; }
+    .pos-total span { color: var(--accent); }
+    .submit-btn { width: 100%; padding: 0.9rem; background: var(--accent); color: white; border: none; border-radius: 0.75rem; font-family: var(--font); font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.15s; }
+    .submit-btn:hover { background: #1e4420; transform: translateY(-1px); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .decrement-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--muted); }
+    .decrement-row input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
   </style>
 </head>
 <body>
@@ -175,10 +217,55 @@
     <div class="brand">Nine<span>2Five</span> Admin</div>
     <div class="header-actions">
       <button class="pill-btn pill-btn-outline" onclick="refresh()">Refresh</button>
+      <button class="pill-btn pill-btn-solid" onclick="openPOS()">+ Log POS Sale</button>
       <button class="pill-btn pill-btn-outline" onclick="logout()">Sign out</button>
-      <a href="/" class="pill-btn pill-btn-solid" style="text-decoration:none">View store</a>
+      <a href="/" class="pill-btn pill-btn-outline" style="text-decoration:none">View store</a>
     </div>
   </header>
+
+  <!-- POS MODAL -->
+  <div class="modal-overlay" id="pos-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Log Point of Sale Order</h2>
+        <button class="modal-close" onclick="closePOS()">✕</button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Customer Name (optional)</label>
+          <input class="form-input" id="pos-name" type="text" placeholder="e.g. Aroha">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Method</label>
+          <select class="form-input" id="pos-payment">
+            <option value="cash">Cash</option>
+            <option value="eftpos">EFTPOS</option>
+            <option value="card">Card</option>
+            <option value="bank_transfer">Bank Transfer</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email (optional)</label>
+        <input class="form-input" id="pos-email" type="email" placeholder="customer@email.com">
+      </div>
+
+      <div class="form-label" style="margin-bottom:0.5rem">Items</div>
+      <div class="pos-items" id="pos-items"></div>
+      <button class="add-item-btn" onclick="addPOSItem()">+ Add another item</button>
+
+      <div class="pos-total">Total: <span id="pos-total-amount">$0.00</span></div>
+
+      <div class="decrement-row">
+        <input type="checkbox" id="pos-decrement" checked>
+        <label for="pos-decrement">Deduct from inventory automatically</label>
+      </div>
+
+      <button class="submit-btn" id="pos-submit" onclick="submitPOS()">Record Sale</button>
+    </div>
+  </div>
 
   <div class="tabs">
     <button class="tab active" data-tab="orders">Orders <span class="tab-badge" id="order-count">0</span></button>
@@ -345,7 +432,8 @@
       const date = new Date(o.created_at);
       const dateStr = date.toLocaleDateString('en-NZ', { day:'numeric', month:'short', year:'numeric' });
       const timeStr = date.toLocaleTimeString('en-NZ', { hour:'2-digit', minute:'2-digit' });
-      const badge = `<span class="badge badge-${o.status || 'paid'}">${o.status || 'paid'}</span>`;
+      const sourceBadge = o.source === 'pos' ? ` <span class="badge" style="background:#e8f0e8;color:#2C5E2E">POS${o.payment_method ? ' · ' + o.payment_method : ''}</span>` : '';
+      const badge = `<span class="badge badge-${o.status || 'paid'}">${o.status || 'paid'}</span>${sourceBadge}`;
       const piShort = o.stripe_pi_id ? o.stripe_pi_id.replace('pi_','').slice(0,12)+'…' : '—';
       return `<tr>
         <td style="white-space:nowrap">${dateStr}<br><span style="font-size:0.75rem;color:var(--muted)">${timeStr}</span></td>
@@ -469,6 +557,131 @@
       const tick = document.getElementById('tick-' + id);
       tick.classList.add('visible');
       setTimeout(() => tick.classList.remove('visible'), 2000);
+    }
+  }
+
+  // ── POS ──
+  let inventoryData = [];
+
+  async function openPOS() {
+    document.getElementById('pos-modal').classList.add('open');
+    document.getElementById('pos-name').value = '';
+    document.getElementById('pos-email').value = '';
+    document.getElementById('pos-payment').value = 'cash';
+    document.getElementById('pos-decrement').checked = true;
+    document.getElementById('pos-items').innerHTML = '';
+    // Fetch inventory for dropdowns if not loaded
+    if (!inventoryData.length) {
+      const res = await fetch('/api/admin-inventory', { headers: { 'X-Admin-Token': token } });
+      inventoryData = await res.json();
+    }
+    addPOSItem();
+    calcPOSTotal();
+  }
+
+  function closePOS() {
+    document.getElementById('pos-modal').classList.remove('open');
+  }
+
+  document.getElementById('pos-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('pos-modal')) closePOS();
+  });
+
+  function addPOSItem() {
+    const container = document.getElementById('pos-items');
+    const idx = container.children.length;
+
+    // Build unique product list
+    const products = [...new Set(inventoryData.map(i => i.product_name))];
+    const productOpts = products.map(p => `<option value="${p}">${p}</option>`).join('');
+
+    const div = document.createElement('div');
+    div.className = 'pos-item';
+    div.dataset.idx = idx;
+    div.innerHTML = `
+      <select onchange="updateSizes(this)" data-idx="${idx}">
+        ${productOpts}
+      </select>
+      <select data-size="${idx}">
+        ${getSizeOptions(products[0])}
+      </select>
+      <input type="number" min="1" value="1" data-qty="${idx}" oninput="calcPOSTotal()">
+      <button class="remove-item-btn" onclick="this.closest('.pos-item').remove(); calcPOSTotal()">✕</button>
+    `;
+    container.appendChild(div);
+    calcPOSTotal();
+  }
+
+  function getSizeOptions(productName) {
+    return inventoryData
+      .filter(i => i.product_name === productName)
+      .map(i => `<option value="${i.size}" data-price="${i.price}">${i.size} — $${parseFloat(i.price).toFixed(2)}</option>`)
+      .join('');
+  }
+
+  function updateSizes(select) {
+    const idx = select.dataset.idx;
+    const sizeSelect = document.querySelector(`[data-size="${idx}"]`);
+    sizeSelect.innerHTML = getSizeOptions(select.value);
+    calcPOSTotal();
+  }
+
+  function calcPOSTotal() {
+    let total = 0;
+    document.querySelectorAll('.pos-item').forEach(row => {
+      const productName = row.querySelector('select').value;
+      const sizeSelect = row.querySelector('select:nth-child(2)');
+      const qty = parseInt(row.querySelector('input[type=number]').value) || 1;
+      const price = parseFloat(sizeSelect?.selectedOptions[0]?.dataset.price || 0);
+      total += price * qty;
+    });
+    document.getElementById('pos-total-amount').textContent = '$' + total.toFixed(2);
+  }
+
+  async function submitPOS() {
+    const btn = document.getElementById('pos-submit');
+    btn.disabled = true;
+    btn.textContent = 'Recording…';
+
+    const items = [];
+    let valid = true;
+    document.querySelectorAll('.pos-item').forEach(row => {
+      const productName = row.querySelector('select').value;
+      const sizeSelect = row.querySelector('select:nth-child(2)');
+      const size = sizeSelect?.value;
+      const qty = parseInt(row.querySelector('input[type=number]').value) || 1;
+      const price = parseFloat(sizeSelect?.selectedOptions[0]?.dataset.price || 0);
+      if (!productName || !size) { valid = false; return; }
+      items.push({ name: productName, size, qty, price });
+    });
+
+    if (!valid || !items.length) {
+      btn.disabled = false;
+      btn.textContent = 'Record Sale';
+      return;
+    }
+
+    const res = await fetch('/api/admin-pos-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+      body: JSON.stringify({
+        customer_name: document.getElementById('pos-name').value || null,
+        customer_email: document.getElementById('pos-email').value || null,
+        payment_method: document.getElementById('pos-payment').value,
+        items,
+        decrement_stock: document.getElementById('pos-decrement').checked,
+      }),
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'Record Sale';
+
+    if (res.ok) {
+      closePOS();
+      loadOrders();
+      loadInventory();
+    } else {
+      alert('Something went wrong — please try again.');
     }
   }
 </script>
