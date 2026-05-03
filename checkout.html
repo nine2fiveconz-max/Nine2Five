@@ -372,7 +372,7 @@
           </div>
           <div>
             <div class="order-item-name">${item.name}</div>
-            <div class="order-item-meta">Size: ${item.size}</div>
+            <div class="order-item-meta">Size: ${item.size} · ${item.qty} ${item.qty === 1 ? 'pair' : 'pairs'}</div>
           </div>
           <div class="order-item-price">$${(item.price * item.qty).toFixed(2)}</div>
         </div>`).join('');
@@ -389,8 +389,9 @@
         total = subtotal;
       }
 
+      const totalPairs = cart.reduce((s, i) => s + (i.qty || 1), 0);
       document.getElementById('summary-totals').innerHTML = `
-        <div class="total-row"><span>Subtotal</span><span>$${subtotal.toFixed(2)} NZD</span></div>
+        <div class="total-row"><span>Subtotal (${totalPairs} ${totalPairs === 1 ? 'pair' : 'pairs'})</span><span>$${subtotal.toFixed(2)} NZD</span></div>
         ${shippingRow}
         <div class="total-row grand"><span>Total</span><span>$${total.toFixed(2)} NZD</span></div>`;
     }
