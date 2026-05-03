@@ -54,7 +54,10 @@ module.exports = async function handler(req, res) {
 
   const data = await r.json();
   if (!r.ok) {
-    console.error('eShip quotation error', r.status, JSON.stringify(data));
+    console.error('eShip status:', r.status);
+    console.error('eShip message:', data?.message || data?.statusMessage || data?.error || 'no message field');
+    console.error('eShip full:', JSON.stringify(data).slice(0, 500));
+    console.error('key prefix:', ESHIP_API_KEY ? ESHIP_API_KEY.slice(0, 6) + '...' : 'MISSING');
     return res.status(r.status).json({ error: 'Could not fetch rates', detail: data });
   }
 
