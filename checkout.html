@@ -504,9 +504,6 @@
       dropdown.innerHTML = '<div class="addr-loading">Searching…</div>';
       dropdown.classList.add('open');
 
-      // Only autocomplete for NZ and AU — others use browser autocomplete
-      if (country !== 'NZ' && country !== 'AU') { closeDropdown(); return; }
-
       try {
         const cc  = country.toLowerCase();
         const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=en&limit=7&countrycode=${cc}`;
