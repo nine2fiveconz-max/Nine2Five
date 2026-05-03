@@ -334,9 +334,9 @@
       }
     }
 
-    // ── Address autocomplete ──
+    // ── Address autocomplete (Photon / OpenStreetMap — free, no key) ──
     let addrDebounce = null;
-    let pendingSuggestions = [];
+    let suggestions  = [];
 
     function initAddressFinder() {
       const input    = document.getElementById('address-line1');
@@ -346,23 +346,20 @@
         clearTimeout(addrDebounce);
         const q = input.value.trim();
         if (q.length < 3) { closeDropdown(); return; }
-        addrDebounce = setTimeout(() => fetchSuggestions(q), 280);
+        addrDebounce = setTimeout(() => fetchSuggestions(q), 300);
       });
 
       input.addEventListener('keydown', e => {
-        const items = dropdown.querySelectorAll('.addr-item');
+        const items  = [...dropdown.querySelectorAll('.addr-item')];
         const active = dropdown.querySelector('.addr-item.active');
-        let idx = [...items].indexOf(active);
-        if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx + 1, items.length - 1); items[idx]?.classList.add('active'); active?.classList.remove('active'); }
-        if (e.key === 'ArrowUp')   { e.preventDefault(); idx = Math.max(idx - 1, 0); items[idx]?.classList.add('active'); active?.classList.remove('active'); }
+        let idx = items.indexOf(active);
+        if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(idx+1, items.length-1)]?.classList.add('active'); active?.classList.remove('active'); }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); items[Math.max(idx-1, 0)]?.classList.add('active'); active?.classList.remove('active'); }
         if (e.key === 'Enter' && active) { e.preventDefault(); active.click(); }
         if (e.key === 'Escape') closeDropdown();
       });
 
-      document.addEventListener('click', e => {
-        if (!e.target.closest('.addr-wrap')) closeDropdown();
-      });
-
+      document.addEventListener('click', e => { if (!e.target.closest('.addr-wrap')) closeDropdown(); });
       document.getElementById('country').addEventListener('change', () => {
         ['address-line1','address-line2','suburb','city','postcode'].forEach(id => document.getElementById(id).value = '');
         closeDropdown();
@@ -375,48 +372,51 @@
       dropdown.innerHTML = '<div class="addr-loading">Searching…</div>';
       dropdown.classList.add('open');
 
+      // Only autocomplete for NZ and AU — others use browser autocomplete
+      if (country !== 'NZ' && country !== 'AU') { closeDropdown(); return; }
+
       try {
-        const res  = await fetch(`/api/address-suggest?q=${encodeURIComponent(q)}&country=${country}`);
+        const cc  = country.toLowerCase();
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=en&limit=7&countrycode=${cc}`;
+        const res = await fetch(url);
         const data = await res.json();
-        pendingSuggestions = data.suggestions || [];
-        renderDropdown(pendingSuggestions, country);
+
+        suggestions = (data.features || [])
+          .map(f => {
+            const p = f.properties;
+            const num    = p.housenumber || '';
+            const street = p.street || p.name || '';
+            const line1  = num ? `${num} ${street}` : street;
+            const suburb = p.suburb || p.district || p.quarter || '';
+            const city   = p.city || p.town || p.village || p.county || '';
+            const post   = p.postcode || '';
+            if (!line1) return null;
+            const label  = [line1, suburb, city, post].filter(Boolean).join(', ');
+            return { label, line1, suburb, city, postcode: post };
+          })
+          .filter(Boolean);
+
+        if (!suggestions.length) {
+          dropdown.innerHTML = '<div class="addr-loading">No addresses found — type your address manually</div>';
+          return;
+        }
+
+        dropdown.innerHTML = suggestions.map((s, i) =>
+          `<div class="addr-item" data-idx="${i}">${s.label}</div>`
+        ).join('');
+
+        dropdown.querySelectorAll('.addr-item').forEach(el => {
+          el.addEventListener('click', () => {
+            const s = suggestions[+el.dataset.idx];
+            document.getElementById('address-line1').value = s.line1;
+            document.getElementById('suburb').value        = s.suburb;
+            document.getElementById('city').value          = s.city;
+            document.getElementById('postcode').value      = s.postcode;
+            closeDropdown();
+            document.getElementById('address-line2').focus();
+          });
+        });
       } catch (_) { closeDropdown(); }
-    }
-
-    function renderDropdown(suggestions, country) {
-      const dropdown = document.getElementById('addr-dropdown');
-      if (!suggestions.length) { dropdown.innerHTML = '<div class="addr-loading">No addresses found</div>'; return; }
-      dropdown.innerHTML = suggestions.map((s, i) => `<div class="addr-item" data-idx="${i}">${s.label}</div>`).join('');
-      dropdown.querySelectorAll('.addr-item').forEach(el => {
-        el.addEventListener('click', () => selectSuggestion(parseInt(el.dataset.idx), country));
-      });
-    }
-
-    async function selectSuggestion(idx, country) {
-      const s = pendingSuggestions[idx];
-      if (!s) return;
-
-      if (country === 'NZ' && s.addressId) {
-        // Fetch full NZ Post details
-        document.getElementById('address-line1').value = s.label;
-        closeDropdown();
-        try {
-          const res  = await fetch(`/api/address-suggest?addressId=${encodeURIComponent(s.addressId)}&country=NZ`);
-          const data = await res.json();
-          document.getElementById('address-line1').value = data.street1 || s.label;
-          document.getElementById('suburb').value        = data.suburb || '';
-          document.getElementById('city').value          = data.city || '';
-          document.getElementById('postcode').value      = data.postcode || '';
-        } catch (_) {}
-      } else {
-        // AU / direct fill
-        document.getElementById('address-line1').value = s.street1 || s.label;
-        document.getElementById('suburb').value        = s.suburb || '';
-        document.getElementById('city').value          = s.city || '';
-        document.getElementById('postcode').value      = s.postcode || '';
-        closeDropdown();
-      }
-      document.getElementById('address-line2').focus();
     }
 
     function closeDropdown() {
