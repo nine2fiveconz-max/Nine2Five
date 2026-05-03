@@ -785,6 +785,9 @@
     }
     .buy-btn:hover { background: var(--accent); color: white; transform: translateY(-1px); }
     .buy-btn:active { transform: scale(0.97); }
+    .buy-btn.sold-out { background: var(--border); color: var(--muted); cursor: not-allowed; pointer-events: none; }
+    .size-opt-btn.sold-out { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+    .size-opt-btn.sold-out::after { content: ' · Sold out'; font-size: 0.65rem; color: var(--muted); }
     .buy-btn:disabled { opacity: 0.6; cursor: wait; }
 
     /* ── TOAST ── */
@@ -1306,6 +1309,55 @@
         });
       });
     });
+
+    // ── Live stock status ──
+    let stockData = [];
+
+    async function loadStock() {
+      try {
+        const res = await fetch('/api/stock');
+        stockData = await res.json();
+      } catch (_) { return; }
+      applyStockToButtons();
+    }
+
+    function getStock(productName, size) {
+      const row = stockData.find(s => s.product_name === productName && s.size === size);
+      return row ? row.stock : 999;
+    }
+
+    function isProductSoldOut(productName) {
+      const rows = stockData.filter(s => s.product_name === productName);
+      if (!rows.length) return false;
+      return rows.every(r => r.stock === 0);
+    }
+
+    function applyStockToButtons() {
+      document.querySelectorAll('.buy-btn').forEach(btn => {
+        if (isProductSoldOut(btn.dataset.name)) {
+          btn.textContent = 'Sold Out';
+          btn.classList.add('sold-out');
+        }
+      });
+    }
+
+    // Patch openSizePicker to grey out sold-out sizes
+    const _origOpenSizePicker = openSizePicker;
+    openSizePicker = function(product) {
+      _origOpenSizePicker(product);
+      document.querySelectorAll('.size-opt-btn').forEach(btn => {
+        const stock = getStock(product.name, btn.dataset.size);
+        if (stock === 0) {
+          btn.classList.add('sold-out');
+          btn.disabled = true;
+        } else {
+          btn.classList.remove('sold-out');
+          btn.disabled = false;
+        }
+      });
+    };
+
+    loadStock();
 
     // ── Checkout → go to checkout page ──
     document.getElementById('cart-checkout-btn').addEventListener('click', () => {
