@@ -155,6 +155,31 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-row { text-align: center; padding: 3rem; }
 
+    .ship-btn {
+      padding: 0.25rem 0.65rem; background: none; border: 1px solid var(--accent);
+      border-radius: 100px; color: var(--accent); font-family: var(--font); font-size: 0.72rem;
+      font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .ship-btn:hover { background: var(--accent); color: white; }
+    .ship-btn.shipped { border-color: var(--border); color: var(--muted); cursor: default; }
+    .ship-btn.shipped:hover { background: none; color: var(--muted); }
+    .rate-option {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 0.75rem;
+      cursor: pointer; transition: all 0.2s; margin-bottom: 0.5rem;
+    }
+    .rate-option:hover, .rate-option.selected { border-color: var(--accent); background: #f0f5f0; }
+    .rate-name { font-size: 0.875rem; font-weight: 600; }
+    .rate-meta { font-size: 0.75rem; color: var(--muted); }
+    .rate-price { font-size: 1rem; font-weight: 700; color: var(--accent); }
+    .label-success {
+      background: #d4edda; border-radius: 0.75rem; padding: 1rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    }
+    .label-success a { color: var(--accent); font-weight: 600; font-size: 0.875rem; text-decoration: none; }
+    .label-success a:hover { text-decoration: underline; }
+    .tracking-chip { font-size: 0.75rem; color: var(--muted); font-family: monospace; }
+
     /* ── POS MODAL ── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(26,23,20,0.5); backdrop-filter: blur(4px);
@@ -222,6 +247,68 @@
       <a href="/" class="pill-btn pill-btn-outline" style="text-decoration:none">View store</a>
     </div>
   </header>
+
+  <!-- SHIP MODAL -->
+  <div class="modal-overlay" id="ship-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Create Shipping Label</h2>
+        <button class="modal-close" onclick="closeShip()">✕</button>
+      </div>
+
+      <div id="ship-order-summary" style="background:var(--bg);border-radius:0.75rem;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.85rem;color:var(--muted)"></div>
+
+      <div class="form-label" style="margin-bottom:0.75rem">Recipient Address</div>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" id="ship-name" type="text" placeholder="Aroha Ngata">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Street Address</label>
+        <input class="form-input" id="ship-street" type="text" placeholder="12 Mānia Road">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input class="form-input" id="ship-city" type="text" placeholder="Auckland">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Postcode</label>
+          <input class="form-input" id="ship-postcode" type="text" placeholder="1010">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Country</label>
+          <select class="form-input" id="ship-country">
+            <option value="NZ">New Zealand</option>
+            <option value="AU">Australia</option>
+            <option value="US">United States</option>
+            <option value="GB">United Kingdom</option>
+            <option value="CA">Canada</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone (optional)</label>
+          <input class="form-input" id="ship-phone" type="tel" placeholder="+64 21 000 0000">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:1.25rem">
+        <label class="form-label">Parcel Weight (kg)</label>
+        <input class="form-input" id="ship-weight" type="number" step="0.1" min="0.1" value="0.3">
+      </div>
+
+      <button class="submit-btn" id="ship-quote-btn" onclick="getShipQuote()" style="margin-bottom:1rem">Get Rates</button>
+
+      <div id="ship-rates" style="display:none">
+        <div class="form-label" style="margin-bottom:0.75rem">Select Service</div>
+        <div id="ship-rates-list"></div>
+        <button class="submit-btn" id="ship-create-btn" onclick="createShipment()" disabled style="margin-top:0.5rem">Create Label</button>
+      </div>
+
+      <div id="ship-result" style="display:none;margin-top:1rem"></div>
+    </div>
+  </div>
 
   <!-- POS MODAL -->
   <div class="modal-overlay" id="pos-modal">
@@ -293,7 +380,8 @@
             <th>Items</th>
             <th>Amount</th>
             <th>Status</th>
-            <th>Stripe ID</th>
+            <th>Tracking</th>
+            <th>Ship</th>
           </tr>
         </thead>
         <tbody id="orders-tbody">
@@ -433,8 +521,16 @@
       const dateStr = date.toLocaleDateString('en-NZ', { day:'numeric', month:'short', year:'numeric' });
       const timeStr = date.toLocaleTimeString('en-NZ', { hour:'2-digit', minute:'2-digit' });
       const sourceBadge = o.source === 'pos' ? ` <span class="badge" style="background:#e8f0e8;color:#2C5E2E">POS${o.payment_method ? ' · ' + o.payment_method : ''}</span>` : '';
-      const badge = `<span class="badge badge-${o.status || 'paid'}">${o.status || 'paid'}</span>${sourceBadge}`;
+      const badge = `<span class="badge badge-${o.status === 'shipped' ? 'paid' : (o.status || 'paid')}">${o.status || 'paid'}</span>${sourceBadge}`;
       const piShort = o.stripe_pi_id ? o.stripe_pi_id.replace('pi_','').slice(0,12)+'…' : '—';
+      const trackingCell = o.tracking_number
+        ? `<span class="tracking-chip">${o.tracking_number}</span><br><a href="https://www.nzpost.co.nz/tools/tracking?trackid=${o.tracking_number}" target="_blank" style="font-size:0.72rem;color:var(--accent)">Track</a>`
+        : '—';
+      const shipBtnLabel = o.tracking_number ? 'Shipped' : 'Ship';
+      const shipBtnClass = o.tracking_number ? 'ship-btn shipped' : 'ship-btn';
+      const shipBtn = o.source !== 'pos' || o.customer_name
+        ? `<button class="${shipBtnClass}" onclick="openShip(${JSON.stringify(o).replace(/"/g, '&quot;')})">${shipBtnLabel}</button>`
+        : '';
       return `<tr>
         <td style="white-space:nowrap">${dateStr}<br><span style="font-size:0.75rem;color:var(--muted)">${timeStr}</span></td>
         <td>${o.customer_name || '—'}</td>
@@ -442,7 +538,8 @@
         <td><div class="items-list">${itemsStr}</div></td>
         <td style="font-weight:700">$${parseFloat(o.amount_nzd).toFixed(2)}</td>
         <td>${badge}</td>
-        <td style="font-size:0.75rem;color:var(--muted);font-family:monospace">${piShort}</td>
+        <td>${trackingCell}</td>
+        <td>${shipBtn}</td>
       </tr>`;
     }).join('');
   }
@@ -558,6 +655,140 @@
       tick.classList.add('visible');
       setTimeout(() => tick.classList.remove('visible'), 2000);
     }
+  }
+
+  // ── SHIP ──
+  let activeOrder = null;
+  let selectedRateId = null;
+
+  function openShip(order) {
+    if (order.tracking_number) return;
+    activeOrder = order;
+    selectedRateId = null;
+    document.getElementById('ship-name').value = order.customer_name || '';
+    document.getElementById('ship-street').value = order.shipping_address?.street1 || '';
+    document.getElementById('ship-city').value = order.shipping_address?.city || '';
+    document.getElementById('ship-postcode').value = order.shipping_address?.zip || '';
+    document.getElementById('ship-country').value = order.shipping_address?.country || 'NZ';
+    document.getElementById('ship-phone').value = order.shipping_address?.phone || '';
+    const qty = Array.isArray(order.items) ? order.items.reduce((s, i) => s + (i.qty || 1), 0) : 1;
+    document.getElementById('ship-weight').value = (qty * 0.15).toFixed(2);
+    document.getElementById('ship-rates').style.display = 'none';
+    document.getElementById('ship-result').style.display = 'none';
+    document.getElementById('ship-quote-btn').style.display = 'block';
+    const items = Array.isArray(order.items) ? order.items.map(i => `${i.name} (${i.size}) ×${i.qty||1}`).join(', ') : (order.items || '');
+    document.getElementById('ship-order-summary').innerHTML = `<strong>${order.customer_name || 'Customer'}</strong> · $${parseFloat(order.amount_nzd).toFixed(2)} NZD<br>${items}`;
+    document.getElementById('ship-modal').classList.add('open');
+  }
+
+  function closeShip() {
+    document.getElementById('ship-modal').classList.remove('open');
+    activeOrder = null;
+  }
+
+  document.getElementById('ship-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('ship-modal')) closeShip();
+  });
+
+  async function getShipQuote() {
+    const btn = document.getElementById('ship-quote-btn');
+    btn.textContent = 'Getting rates…';
+    btn.disabled = true;
+
+    const address_to = {
+      name: document.getElementById('ship-name').value,
+      street1: document.getElementById('ship-street').value,
+      city: document.getElementById('ship-city').value,
+      zip: document.getElementById('ship-postcode').value,
+      country: document.getElementById('ship-country').value,
+      phone: document.getElementById('ship-phone').value,
+    };
+
+    const res = await fetch('/api/nzpost-quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+      body: JSON.stringify({ address_to, weight_kg: parseFloat(document.getElementById('ship-weight').value) }),
+    });
+
+    btn.textContent = 'Get Rates';
+    btn.disabled = false;
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Could not get rates: ' + JSON.stringify(err.error));
+      return;
+    }
+
+    const data = await res.json();
+    const rates = data.rates || data;
+    const list = document.getElementById('ship-rates-list');
+    list.innerHTML = rates.map(r => `
+      <div class="rate-option" onclick="selectRate(this, '${r.rate_id || r.object_id}')">
+        <div>
+          <div class="rate-name">${r.provider || r.carrier} — ${r.servicelevel?.name || r.service || ''}</div>
+          <div class="rate-meta">${r.estimated_days ? r.estimated_days + ' day(s)' : ''}</div>
+        </div>
+        <div class="rate-price">$${parseFloat(r.amount || r.price || 0).toFixed(2)}</div>
+      </div>
+    `).join('');
+    document.getElementById('ship-rates').style.display = 'block';
+    document.getElementById('ship-create-btn').disabled = true;
+    selectedRateId = null;
+  }
+
+  function selectRate(el, rateId) {
+    document.querySelectorAll('.rate-option').forEach(r => r.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedRateId = rateId;
+    document.getElementById('ship-create-btn').disabled = false;
+  }
+
+  async function createShipment() {
+    if (!selectedRateId || !activeOrder) return;
+    const btn = document.getElementById('ship-create-btn');
+    btn.textContent = 'Creating label…';
+    btn.disabled = true;
+
+    const address_to = {
+      name: document.getElementById('ship-name').value,
+      street1: document.getElementById('ship-street').value,
+      city: document.getElementById('ship-city').value,
+      zip: document.getElementById('ship-postcode').value,
+      country: document.getElementById('ship-country').value,
+      phone: document.getElementById('ship-phone').value,
+    };
+
+    const res = await fetch('/api/nzpost-ship', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+      body: JSON.stringify({ order_id: activeOrder.id, rate_id: selectedRateId, address_to }),
+    });
+
+    btn.textContent = 'Create Label';
+    btn.disabled = false;
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Label creation failed: ' + JSON.stringify(err.error));
+      return;
+    }
+
+    const { tracking_number, label_url, tracking_url } = await res.json();
+    document.getElementById('ship-quote-btn').style.display = 'none';
+    document.getElementById('ship-rates').style.display = 'none';
+    document.getElementById('ship-result').innerHTML = `
+      <div class="label-success">
+        <div>
+          <div style="font-weight:700;margin-bottom:0.25rem">Label created!</div>
+          <div class="tracking-chip">Tracking: ${tracking_number}</div>
+        </div>
+        <div style="display:flex;gap:0.75rem">
+          <a href="${label_url}" target="_blank">Print Label</a>
+          ${tracking_url ? `<a href="${tracking_url}" target="_blank">Track</a>` : ''}
+        </div>
+      </div>`;
+    document.getElementById('ship-result').style.display = 'block';
+    loadOrders();
   }
 
   // ── POS ──
