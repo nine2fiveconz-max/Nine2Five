@@ -1,5 +1,53 @@
-const ESHIP_API_KEY = process.env.NZPOST_ESHIP_API_KEY;
-const ESHIP_BASE = 'https://api.myeship.co/rest';
+const RATES = {
+  NZ: { provider: 'NZ Post', service: 'Standard Tracked',       price: 9.50  },
+  AU: { provider: 'NZ Post', service: 'International Tracked',  price: 22.00 },
+  // Asia
+  JP: { provider: 'NZ Post', service: 'International Tracked',  price: 26.00 },
+  SG: { provider: 'NZ Post', service: 'International Tracked',  price: 24.00 },
+  HK: { provider: 'NZ Post', service: 'International Tracked',  price: 24.00 },
+  KR: { provider: 'NZ Post', service: 'International Tracked',  price: 26.00 },
+  TW: { provider: 'NZ Post', service: 'International Tracked',  price: 26.00 },
+  CN: { provider: 'NZ Post', service: 'International Tracked',  price: 26.00 },
+  MY: { provider: 'NZ Post', service: 'International Tracked',  price: 26.00 },
+  TH: { provider: 'NZ Post', service: 'International Tracked',  price: 26.00 },
+  PH: { provider: 'NZ Post', service: 'International Tracked',  price: 28.00 },
+  ID: { provider: 'NZ Post', service: 'International Tracked',  price: 28.00 },
+  VN: { provider: 'NZ Post', service: 'International Tracked',  price: 28.00 },
+  IN: { provider: 'NZ Post', service: 'International Tracked',  price: 30.00 },
+  // Americas
+  US: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  CA: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  MX: { provider: 'NZ Post', service: 'International Tracked',  price: 36.00 },
+  // UK & Europe
+  GB: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  IE: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  FR: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  DE: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  IT: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  ES: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  PT: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  NL: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  BE: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  CH: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  AT: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  SE: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  NO: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  DK: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  FI: { provider: 'NZ Post', service: 'International Tracked',  price: 32.00 },
+  PL: { provider: 'NZ Post', service: 'International Tracked',  price: 34.00 },
+  CZ: { provider: 'NZ Post', service: 'International Tracked',  price: 34.00 },
+  GR: { provider: 'NZ Post', service: 'International Tracked',  price: 34.00 },
+  // Middle East
+  AE: { provider: 'NZ Post', service: 'International Tracked',  price: 34.00 },
+  SA: { provider: 'NZ Post', service: 'International Tracked',  price: 36.00 },
+  IL: { provider: 'NZ Post', service: 'International Tracked',  price: 34.00 },
+  // Africa
+  ZA: { provider: 'NZ Post', service: 'International Tracked',  price: 40.00 },
+  // South America
+  BR: { provider: 'NZ Post', service: 'International Tracked',  price: 40.00 },
+  AR: { provider: 'NZ Post', service: 'International Tracked',  price: 40.00 },
+  CL: { provider: 'NZ Post', service: 'International Tracked',  price: 38.00 },
+};
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,69 +56,19 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { country, city, postcode, qty } = req.body;
+  const { country } = req.body;
   if (!country) return res.status(400).json({ error: 'country required' });
 
-  const weight = Math.max(0.15, (qty || 1) * 0.15);
+  const rate = RATES[country];
+  if (!rate) return res.status(200).json({ rates: [] });
 
-  const payload = {
-    address_from: {
-      name:    process.env.NZPOST_SENDER_NAME,
-      street1: process.env.NZPOST_SENDER_STREET,
-      city:    process.env.NZPOST_SENDER_CITY,
-      zip:     process.env.NZPOST_SENDER_POSTCODE,
-      country: 'NZ',
-      phone:   process.env.NZPOST_SENDER_PHONE,
-    },
-    address_to: {
-      name:    'Customer',
-      street1: '1 Main Street',
-      city:    city || 'Unknown',
-      zip:     postcode || '',
-      country,
-      phone:   '',
-    },
-    parcels: [{
-      length: 20, width: 15, height: 8,
-      distance_unit: 'cm',
-      weight,
-      mass_unit: 'kg',
+  return res.status(200).json({
+    rates: [{
+      rate_id:        country,
+      provider:       rate.provider,
+      service:        rate.service,
+      price:          rate.price,
+      estimated_days: null,
     }],
-  };
-
-  if (!ESHIP_API_KEY) {
-    console.error('NZPOST_ESHIP_API_KEY is not set');
-    return res.status(500).json({ error: 'Shipping not configured', detail: 'Missing API key' });
-  }
-
-  const r = await fetch(`${ESHIP_BASE}/quotation`, {
-    method: 'POST',
-    headers: {
-      'Ocp-Apim-Subscription-Key': ESHIP_API_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
   });
-
-  const data = await r.json();
-  if (!r.ok) {
-    console.error('eShip status:', r.status);
-    console.error('eShip message:', data?.message || data?.statusMessage || data?.error || 'no message field');
-    console.error('eShip full:', JSON.stringify(data).slice(0, 500));
-    console.error('key prefix:', ESHIP_API_KEY ? ESHIP_API_KEY.slice(0, 6) + '...' : 'MISSING');
-    return res.status(r.status).json({ error: 'Could not fetch rates', detail: data });
-  }
-
-  const rates = (data.rates || data || [])
-    .filter(r => r.amount || r.price)
-    .sort((a, b) => (a.amount || a.price) - (b.amount || b.price))
-    .map(r => ({
-      rate_id:       r.rate_id || r.object_id,
-      provider:      r.provider || r.carrier || 'NZ Post',
-      service:       r.servicelevel?.name || r.service || 'Standard',
-      price:         parseFloat(r.amount || r.price || 0),
-      estimated_days: r.estimated_days || null,
-    }));
-
-  return res.status(200).json({ rates });
 };
