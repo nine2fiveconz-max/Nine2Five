@@ -40,7 +40,16 @@
     .summary-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 2rem; }
     .order-items { display: flex; flex-direction: column; gap: 0; margin-bottom: 2rem; }
     .order-item { display: grid; grid-template-columns: 64px 1fr auto auto; gap: 1rem; padding: 1.25rem 0; border-bottom: 1px solid var(--border); align-items: center; }
-    .order-item-qty { font-size: 0.8rem; font-weight: 600; color: var(--muted); white-space: nowrap; text-align: right; }
+    .qty-stepper { display: flex; align-items: center; gap: 0.5rem; }
+    .qty-btn {
+      width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border);
+      background: var(--white); color: var(--fg); font-size: 1.1rem; line-height: 1;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, background 0.15s, color 0.15s; flex-shrink: 0;
+    }
+    .qty-btn:hover { border-color: var(--accent); background: #f0f5f0; color: var(--accent); }
+    .qty-btn:active { transform: scale(0.9); }
+    .qty-count { font-size: 0.8rem; font-weight: 600; min-width: 3.5rem; text-align: center; color: var(--fg); white-space: nowrap; }
     .order-item:first-child { border-top: 1px solid var(--border); }
     .order-item-img { width: 64px; height: 80px; border-radius: 0.5rem; overflow: hidden; background: var(--white); position: relative; }
     .order-item-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -390,6 +399,7 @@
       renderSummary();
       initStripe().then(() => fetchShippingRates());
       initAddressFinder();
+      initQtyControls();
     }
 
     // ── Order summary ──
@@ -399,13 +409,16 @@
         <div class="order-item">
           <div class="order-item-img">
             ${item.img ? `<img src="${item.img}" alt="${item.name}" loading="lazy">` : ''}
-            <div class="qty-bubble">${item.qty}</div>
           </div>
           <div>
             <div class="order-item-name">${item.name}</div>
             <div class="order-item-meta">Size: ${item.size}</div>
           </div>
-          <div class="order-item-qty">${item.qty} ${item.qty === 1 ? 'pair' : 'pairs'}</div>
+          <div class="qty-stepper">
+            <button class="qty-btn" data-action="dec" data-name="${item.name}" data-size="${item.size}">−</button>
+            <span class="qty-count">${item.qty} ${item.qty === 1 ? 'pair' : 'pairs'}</span>
+            <button class="qty-btn" data-action="inc" data-name="${item.name}" data-size="${item.size}">+</button>
+          </div>
           <div class="order-item-price">$${(item.price * item.qty).toFixed(2)}</div>
         </div>`).join('');
 
@@ -489,6 +502,41 @@
       const total = Math.max(0, cart.reduce((s, i) => s + i.price * i.qty, 0) + selectedRate.price - discountCents / 100);
       btn.disabled = false;
       btn.innerHTML = `${lockSvg} Pay $${total.toFixed(2)} NZD`;
+    }
+
+    // ── Qty steppers ──
+    function initQtyControls() {
+      document.getElementById('order-items').addEventListener('click', e => {
+        const btn = e.target.closest('.qty-btn');
+        if (!btn) return;
+        updateCartQty(btn.dataset.name, btn.dataset.size, btn.dataset.action === 'inc' ? 1 : -1);
+      });
+    }
+
+    function updateCartQty(name, size, delta) {
+      const idx = cart.findIndex(i => i.name === name && i.size === size);
+      if (idx === -1) return;
+      cart[idx].qty = Math.max(0, cart[idx].qty + delta);
+      if (cart[idx].qty === 0) cart.splice(idx, 1);
+      localStorage.setItem('n2f-cart', JSON.stringify(cart));
+
+      if (cart.length === 0) {
+        document.getElementById('checkout-grid').innerHTML = `
+          <div class="empty-checkout">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M6 6h6l7.2 22.2a3 3 0 0 0 2.88 1.8h15.84a3 3 0 0 0 2.88-2.2L44 14H12" stroke="#C8BFB4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="42" r="3" fill="#C8BFB4"/><circle cx="36" cy="42" r="3" fill="#C8BFB4"/></svg>
+            <h2>Your cart is empty</h2>
+            <p>Add some socks before checking out.</p>
+            <a href="/#collection" style="margin-top:1rem;background:var(--accent);color:white;padding:0.8rem 1.75rem;border-radius:100px;text-decoration:none;font-weight:600;font-size:0.9rem;">Browse Collection</a>
+          </div>`;
+        return;
+      }
+
+      // Recalculate base and re-render
+      baseAmountCents = cart.reduce((s, i) => s + Math.round(i.price * 100) * (i.qty || 1), 0);
+      const summaryRate = selectedRate ? { label: `${selectedRate.provider} — ${selectedRate.service}`, price: selectedRate.price } : null;
+      renderSummary(summaryRate);
+      updatePayButton();
+      fetchShippingRates();
     }
 
     // ── Address autocomplete (Photon / OpenStreetMap — free, no key) ──
