@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout — Nine2Five</title>
   <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://api.addressfinder.io/assets/v3/widget.js" async></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
@@ -12,8 +13,8 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #F6F2EC; --fg: #1A1714; --accent: #2C5E2E; --gold: #B8893A;
-      --muted: #8A7F74; --border: #E2D9CE; --white: #FDFBF8; --dark: #141210;
-      --font: 'Outfit', sans-serif; --error: #c0392b;
+      --muted: #8A7F74; --border: #E2D9CE; --white: #FDFBF8; --error: #c0392b;
+      --font: 'Outfit', sans-serif;
     }
     html { scroll-behavior: smooth; }
     body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.5; min-height: 100dvh; }
@@ -27,124 +28,79 @@
     }
     .nav-brand { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.03em; text-decoration: none; color: var(--fg); }
     .nav-brand span { color: var(--accent); }
-    .nav-back { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8125rem; font-weight: 500; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-    .nav-back:hover { color: var(--fg); }
     .nav-steps { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--muted); }
     .nav-steps .step-active { color: var(--accent); }
+    .nav-back { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8125rem; font-weight: 500; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .nav-back:hover { color: var(--fg); }
 
     /* ── LAYOUT ── */
-    .checkout-grid {
-      display: grid;
-      grid-template-columns: 1fr 480px;
-      min-height: calc(100dvh - 62px);
-    }
+    .checkout-grid { display: grid; grid-template-columns: 1fr 500px; min-height: calc(100dvh - 62px); }
 
     /* ── LEFT: ORDER SUMMARY ── */
-    .summary-panel {
-      padding: 3rem 3rem 3rem 4rem;
-      border-right: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .summary-label {
-      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em;
-      text-transform: uppercase; color: var(--muted); margin-bottom: 2rem;
-    }
+    .summary-panel { padding: 3rem 3rem 3rem 4rem; border-right: 1px solid var(--border); background: var(--bg); }
+    .summary-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 2rem; }
     .order-items { display: flex; flex-direction: column; gap: 0; margin-bottom: 2rem; }
-    .order-item {
-      display: grid; grid-template-columns: 64px 1fr auto;
-      gap: 1rem; padding: 1.25rem 0; border-bottom: 1px solid var(--border);
-      align-items: center;
-    }
+    .order-item { display: grid; grid-template-columns: 64px 1fr auto; gap: 1rem; padding: 1.25rem 0; border-bottom: 1px solid var(--border); align-items: center; }
     .order-item:first-child { border-top: 1px solid var(--border); }
-    .order-item-img {
-      width: 64px; height: 80px; border-radius: 0.5rem;
-      overflow: hidden; background: var(--white); position: relative;
-    }
+    .order-item-img { width: 64px; height: 80px; border-radius: 0.5rem; overflow: hidden; background: var(--white); position: relative; }
     .order-item-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .qty-bubble {
-      position: absolute; top: -6px; right: -6px;
-      background: var(--fg); color: white; border-radius: 100px;
-      font-size: 0.6rem; font-weight: 700; min-width: 18px; height: 18px;
-      display: flex; align-items: center; justify-content: center; padding: 0 4px;
-    }
+    .qty-bubble { position: absolute; top: -6px; right: -6px; background: var(--fg); color: white; border-radius: 100px; font-size: 0.6rem; font-weight: 700; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
     .order-item-name { font-size: 0.875rem; font-weight: 600; letter-spacing: -0.01em; }
     .order-item-meta { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
     .order-item-price { font-size: 0.9rem; font-weight: 700; letter-spacing: -0.02em; }
-
     .summary-totals { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
     .total-row { display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--muted); }
     .total-row.grand { border-top: 1px solid var(--border); padding-top: 0.75rem; margin-top: 0.25rem; font-size: 1.1rem; font-weight: 700; color: var(--fg); letter-spacing: -0.02em; }
     .total-row.grand span:last-child { font-size: 1.25rem; }
-
     .trust-badges { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
     .trust-badge { display: flex; align-items: center; gap: 0.6rem; font-size: 0.75rem; color: var(--muted); }
-    .trust-badge svg { flex-shrink: 0; }
 
-    /* ── RIGHT: PAYMENT FORM ── */
-    .payment-panel {
-      padding: 3rem;
-      background: var(--white);
-      display: flex; flex-direction: column;
-    }
-    .payment-label {
-      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em;
-      text-transform: uppercase; color: var(--muted); margin-bottom: 2rem;
-    }
+    /* ── RIGHT: FORM ── */
+    .payment-panel { padding: 3rem; background: var(--white); display: flex; flex-direction: column; overflow-y: auto; }
 
-    .field-group { display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.75rem; }
+    .form-section { margin-bottom: 2rem; }
+    .form-section-title {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1.25rem; padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .field-group { display: flex; flex-direction: column; gap: 1rem; }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .field-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
     .field-label { font-size: 0.75rem; font-weight: 600; color: var(--fg); letter-spacing: 0.02em; }
     .field-input {
       border: 1.5px solid var(--border); border-radius: 0.625rem;
       padding: 0.75rem 0.875rem; font-family: var(--font); font-size: 0.9rem;
-      color: var(--fg); background: var(--bg); outline: none;
-      transition: border-color 0.2s;
+      color: var(--fg); background: var(--bg); outline: none; transition: border-color 0.2s; width: 100%;
     }
     .field-input:focus { border-color: var(--accent); background: var(--white); }
     .field-input::placeholder { color: var(--muted); }
     .field-input.error { border-color: var(--error); }
 
-    .divider {
-      display: flex; align-items: center; gap: 0.75rem;
-      margin-bottom: 1.75rem; color: var(--muted); font-size: 0.75rem; font-weight: 500;
-    }
-    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    /* AddressFinder dropdown override */
+    .af_list { border-radius: 0.75rem !important; border: 1.5px solid var(--border) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important; font-family: var(--font) !important; overflow: hidden; }
+    .af_item { padding: 0.65rem 1rem !important; font-size: 0.875rem !important; }
+    .af_item:hover, .af_item_active { background: #f0f5f0 !important; color: var(--accent) !important; }
 
-    #payment-element { margin-bottom: 1.75rem; }
+    #payment-element { margin-bottom: 1.5rem; }
 
     .pay-btn {
       width: 100%; background: var(--accent); color: white; border: none;
       padding: 1rem 1.5rem; border-radius: 100px; font-size: 1rem; font-weight: 700;
       cursor: pointer; font-family: var(--font); display: flex; align-items: center;
-      justify-content: center; gap: 0.6rem; transition: background 0.2s, transform 0.15s;
-      letter-spacing: -0.01em;
+      justify-content: center; gap: 0.6rem; transition: background 0.2s, transform 0.15s; letter-spacing: -0.01em;
     }
     .pay-btn:hover:not(:disabled) { background: #1e4420; transform: translateY(-1px); }
     .pay-btn:active:not(:disabled) { transform: scale(0.98); }
     .pay-btn:disabled { opacity: 0.6; cursor: wait; }
-
-    .pay-note {
-      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
-      margin-top: 1rem; font-size: 0.72rem; color: var(--muted); text-align: center;
-    }
-
+    .pay-note { display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1rem; font-size: 0.72rem; color: var(--muted); text-align: center; }
     .error-msg { color: var(--error); font-size: 0.8rem; margin-top: 0.75rem; display: none; }
     .error-msg.visible { display: block; }
 
-    /* ── EMPTY STATE ── */
-    .empty-checkout {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 1rem; padding: 4rem 2rem; text-align: center; grid-column: span 2;
-    }
+    .empty-checkout { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 4rem 2rem; text-align: center; grid-column: span 2; }
     .empty-checkout h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; }
     .empty-checkout p { color: var(--muted); font-size: 0.9rem; }
 
-    /* ── LOADING SKELETON ── */
-    .skeleton { background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 0.5rem; }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-    /* ── MOBILE ── */
     @media (max-width: 768px) {
       nav { padding: 1rem 1.25rem; }
       .nav-steps { display: none; }
@@ -153,6 +109,7 @@
       .payment-panel { padding: 2rem 1.25rem; }
       .field-row { grid-template-columns: 1fr; }
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -195,54 +152,99 @@
       </div>
     </div>
 
-    <!-- PAYMENT FORM -->
+    <!-- CHECKOUT FORM -->
     <div class="payment-panel">
-      <p class="payment-label">Payment Details</p>
 
-      <div class="field-group">
-        <div class="field-row">
-          <div class="field-wrap">
-            <label class="field-label" for="first-name">First name</label>
-            <input class="field-input" id="first-name" type="text" placeholder="Te Koha" autocomplete="given-name">
+      <!-- 1. CONTACT -->
+      <div class="form-section">
+        <div class="form-section-title">Contact</div>
+        <div class="field-group">
+          <div class="field-row">
+            <div class="field-wrap">
+              <label class="field-label" for="first-name">First name</label>
+              <input class="field-input" id="first-name" type="text" placeholder="Te Koha" autocomplete="given-name">
+            </div>
+            <div class="field-wrap">
+              <label class="field-label" for="last-name">Last name</label>
+              <input class="field-input" id="last-name" type="text" placeholder="Tūhoe" autocomplete="family-name">
+            </div>
           </div>
           <div class="field-wrap">
-            <label class="field-label" for="last-name">Last name</label>
-            <input class="field-input" id="last-name" type="text" placeholder="Tūhoe" autocomplete="family-name">
+            <label class="field-label" for="email">Email address</label>
+            <input class="field-input" id="email" type="email" placeholder="you@example.com" autocomplete="email">
           </div>
-        </div>
-        <div class="field-wrap">
-          <label class="field-label" for="email">Email address</label>
-          <input class="field-input" id="email" type="email" placeholder="you@example.com" autocomplete="email">
+          <div class="field-wrap">
+            <label class="field-label" for="phone">Phone number</label>
+            <input class="field-input" id="phone" type="tel" placeholder="+64 21 000 0000" autocomplete="tel">
+          </div>
         </div>
       </div>
 
-      <div class="divider">Card details</div>
+      <!-- 2. DELIVERY ADDRESS -->
+      <div class="form-section">
+        <div class="form-section-title">Delivery Address</div>
+        <div class="field-group">
+          <div class="field-wrap">
+            <label class="field-label" for="address-line1">Street address</label>
+            <input class="field-input" id="address-line1" type="text" placeholder="Start typing your address…" autocomplete="address-line1">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label" for="address-line2">Apartment, unit, suite (optional)</label>
+            <input class="field-input" id="address-line2" type="text" placeholder="Apt 2B" autocomplete="address-line2">
+          </div>
+          <div class="field-row">
+            <div class="field-wrap">
+              <label class="field-label" for="suburb">Suburb</label>
+              <input class="field-input" id="suburb" type="text" placeholder="Ponsonby" autocomplete="address-level3">
+            </div>
+            <div class="field-wrap">
+              <label class="field-label" for="city">City / Town</label>
+              <input class="field-input" id="city" type="text" placeholder="Auckland" autocomplete="address-level2">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-wrap">
+              <label class="field-label" for="postcode">Postcode</label>
+              <input class="field-input" id="postcode" type="text" placeholder="1011" autocomplete="postal-code">
+            </div>
+            <div class="field-wrap">
+              <label class="field-label" for="country">Country</label>
+              <select class="field-input" id="country" autocomplete="country">
+                <option value="NZ">New Zealand</option>
+                <option value="AU">Australia</option>
+                <option value="US">United States</option>
+                <option value="GB">United Kingdom</option>
+                <option value="CA">Canada</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <div id="payment-element"></div>
+      <!-- 3. PAYMENT -->
+      <div class="form-section">
+        <div class="form-section-title">Payment</div>
+        <div id="payment-element"></div>
+        <div class="error-msg" id="error-msg"></div>
+        <button class="pay-btn" id="pay-btn" disabled>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4.5" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 4.5V3.5a3.5 3.5 0 1 1 7 0v1" stroke="currentColor" stroke-width="1.4"/><path d="M1 8h14" stroke="currentColor" stroke-width="1.4"/></svg>
+          Loading…
+        </button>
+        <p class="pay-note">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="0.5" y="3.5" width="11" height="8" rx="1" stroke="currentColor" stroke-width="1"/><path d="M3 3.5V3a3 3 0 0 1 6 0v.5" stroke="currentColor" stroke-width="1"/></svg>
+          Your payment is encrypted and secure. We never store card details.
+        </p>
+      </div>
 
-      <div class="error-msg" id="error-msg"></div>
-
-      <button class="pay-btn" id="pay-btn" disabled>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4.5" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 4.5V3.5a3.5 3.5 0 1 1 7 0v1" stroke="currentColor" stroke-width="1.4"/><path d="M1 8h14" stroke="currentColor" stroke-width="1.4"/></svg>
-        Loading…
-      </button>
-
-      <p class="pay-note">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="0.5" y="3.5" width="11" height="8" rx="1" stroke="currentColor" stroke-width="1"/><path d="M3 3.5V3a3 3 0 0 1 6 0v.5" stroke="currentColor" stroke-width="1"/></svg>
-        Your payment is encrypted and secure. We never store card details.
-      </p>
     </div>
-
   </div>
 
   <script>
     const PUBLISHABLE_KEY = 'pk_live_51QQHA4CA9Ax2EtslOBniEN9i6ATir27Y4geLt4w5bkGC4IKW5G6CE6vpBG9gx1o27DvtjN20MFnG7MJdtOC66ts900FR0eil8l';
     const stripe = Stripe(PUBLISHABLE_KEY);
-
     let elements;
     const cart = JSON.parse(localStorage.getItem('n2f-cart') || '[]');
 
-    // ── Redirect if cart empty ──
     if (cart.length === 0) {
       document.getElementById('checkout-grid').innerHTML = `
         <div class="empty-checkout">
@@ -250,25 +252,16 @@
           <h2>Your cart is empty</h2>
           <p>Add some socks before checking out.</p>
           <a href="/#collection" style="margin-top:1rem;background:var(--accent);color:white;padding:0.8rem 1.75rem;border-radius:100px;text-decoration:none;font-weight:600;font-size:0.9rem;">Browse Collection</a>
-        </div>
-      `;
+        </div>`;
     } else {
-      initCheckout();
-    }
-
-    function initCheckout() {
       renderSummary();
       initStripe();
+      initAddressFinder();
     }
 
-    // ── Render order summary ──
     function renderSummary() {
-      const itemsEl = document.getElementById('order-items');
-      const totalsEl = document.getElementById('summary-totals');
-
       const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-
-      itemsEl.innerHTML = cart.map(item => `
+      document.getElementById('order-items').innerHTML = cart.map(item => `
         <div class="order-item">
           <div class="order-item-img">
             ${item.img ? `<img src="${item.img}" alt="${item.name}" loading="lazy">` : ''}
@@ -279,17 +272,13 @@
             <div class="order-item-meta">Size: ${item.size}</div>
           </div>
           <div class="order-item-price">$${(item.price * item.qty).toFixed(2)}</div>
-        </div>
-      `).join('');
-
-      totalsEl.innerHTML = `
+        </div>`).join('');
+      document.getElementById('summary-totals').innerHTML = `
         <div class="total-row"><span>Subtotal</span><span>$${subtotal.toFixed(2)} NZD</span></div>
-        <div class="total-row"><span>Shipping</span><span style="color:var(--accent);font-weight:600;">Calculated at next step</span></div>
-        <div class="total-row grand"><span>Total</span><span>$${subtotal.toFixed(2)} NZD</span></div>
-      `;
+        <div class="total-row"><span>Shipping</span><span style="color:var(--accent);font-weight:600">Calculated at next step</span></div>
+        <div class="total-row grand"><span>Total</span><span>$${subtotal.toFixed(2)} NZD</span></div>`;
     }
 
-    // ── Init Stripe ──
     async function initStripe() {
       try {
         const res = await fetch('/api/payment-intent', {
@@ -305,94 +294,83 @@
           appearance: {
             theme: 'flat',
             variables: {
-              fontFamily: "'Outfit', sans-serif",
-              fontSizeBase: '15px',
-              colorPrimary: '#2C5E2E',
-              colorBackground: '#F6F2EC',
-              colorText: '#1A1714',
-              colorTextPlaceholder: '#8A7F74',
-              colorDanger: '#c0392b',
-              borderRadius: '10px',
-              spacingUnit: '4px',
+              fontFamily: "'Outfit', sans-serif", fontSizeBase: '15px',
+              colorPrimary: '#2C5E2E', colorBackground: '#F6F2EC',
+              colorText: '#1A1714', colorTextPlaceholder: '#8A7F74',
+              colorDanger: '#c0392b', borderRadius: '10px', spacingUnit: '4px',
             },
             rules: {
-              '.Input': {
-                border: '1.5px solid #E2D9CE',
-                padding: '12px 14px',
-                backgroundColor: '#F6F2EC',
-              },
-              '.Input:focus': {
-                border: '1.5px solid #2C5E2E',
-                backgroundColor: '#FDFBF8',
-                boxShadow: 'none',
-              },
-              '.Label': {
-                fontWeight: '600',
-                fontSize: '12px',
-                letterSpacing: '0.02em',
-                color: '#1A1714',
-                marginBottom: '6px',
-              },
+              '.Input': { border: '1.5px solid #E2D9CE', padding: '12px 14px', backgroundColor: '#F6F2EC' },
+              '.Input:focus': { border: '1.5px solid #2C5E2E', backgroundColor: '#FDFBF8', boxShadow: 'none' },
+              '.Label': { fontWeight: '600', fontSize: '12px', letterSpacing: '0.02em', color: '#1A1714', marginBottom: '6px' },
             },
           },
         });
 
-        const paymentElement = elements.create('payment', {
-          layout: 'tabs',
-          defaultValues: {
-            billingDetails: {
-              email: document.getElementById('email').value || undefined,
-            },
-          },
-        });
-
+        const paymentElement = elements.create('payment', { layout: 'tabs' });
         paymentElement.mount('#payment-element');
         paymentElement.on('ready', () => {
-          const btn = document.getElementById('pay-btn');
           const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+          const btn = document.getElementById('pay-btn');
           btn.disabled = false;
           btn.innerHTML = `
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4.5" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 4.5V3.5a3.5 3.5 0 1 1 7 0v1" stroke="currentColor" stroke-width="1.4"/><path d="M1 8h14" stroke="currentColor" stroke-width="1.4"/></svg>
-            Pay $${total.toFixed(2)} NZD
-          `;
+            Pay $${total.toFixed(2)} NZD`;
         });
-
       } catch (err) {
         document.getElementById('error-msg').textContent = 'Could not load payment form. Please try again.';
         document.getElementById('error-msg').classList.add('visible');
       }
     }
 
-    // ── Submit payment ──
+    // ── AddressFinder autocomplete ──
+    function initAddressFinder() {
+      // Waits for the script to load then attaches the widget
+      function attach() {
+        if (typeof AddressFinder === 'undefined') { setTimeout(attach, 200); return; }
+        const widget = new AddressFinder.Widget(
+          document.getElementById('address-line1'),
+          'DEMO', // Replace with your AddressFinder API key from addressfinder.nz
+          'NZ',
+          { show_addresses: true, address_params: {} }
+        );
+        widget.on('result:select', function(fullAddress, meta) {
+          document.getElementById('address-line1').value = meta.address_line_1 || meta.address_line1 || '';
+          document.getElementById('suburb').value      = meta.suburb || '';
+          document.getElementById('city').value        = meta.city || '';
+          document.getElementById('postcode').value    = meta.postcode || '';
+          document.getElementById('country').value     = 'NZ';
+          // Move focus to apartment field
+          document.getElementById('address-line2').focus();
+        });
+      }
+      attach();
+    }
+
+    // ── Submit ──
     document.getElementById('pay-btn').addEventListener('click', async () => {
       if (!elements) return;
-
-      const firstName = document.getElementById('first-name').value.trim();
-      const lastName = document.getElementById('last-name').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const errorEl = document.getElementById('error-msg');
+      const firstName  = document.getElementById('first-name').value.trim();
+      const lastName   = document.getElementById('last-name').value.trim();
+      const email      = document.getElementById('email').value.trim();
+      const phone      = document.getElementById('phone').value.trim();
+      const line1      = document.getElementById('address-line1').value.trim();
+      const line2      = document.getElementById('address-line2').value.trim();
+      const city       = document.getElementById('city').value.trim();
+      const postcode   = document.getElementById('postcode').value.trim();
+      const country    = document.getElementById('country').value;
+      const errorEl    = document.getElementById('error-msg');
       errorEl.classList.remove('visible');
 
-      // Basic validation
-      if (!firstName || !lastName) {
-        errorEl.textContent = 'Please enter your full name.';
-        errorEl.classList.add('visible');
-        document.getElementById('first-name').classList.add('error');
-        return;
-      }
-      if (!email || !email.includes('@')) {
-        errorEl.textContent = 'Please enter a valid email address.';
-        errorEl.classList.add('visible');
-        document.getElementById('email').classList.add('error');
-        return;
-      }
+      if (!firstName || !lastName) { return showError('Please enter your full name.', 'first-name'); }
+      if (!email || !email.includes('@')) { return showError('Please enter a valid email address.', 'email'); }
+      if (!line1) { return showError('Please enter your delivery address.', 'address-line1'); }
+      if (!city)  { return showError('Please enter your city.', 'city'); }
+      if (!postcode) { return showError('Please enter your postcode.', 'postcode'); }
 
       const btn = document.getElementById('pay-btn');
       btn.disabled = true;
-      btn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="animation:spin 1s linear infinite"><circle cx="8" cy="8" r="6" stroke="rgba(255,255,255,0.3)" stroke-width="2"/><path d="M8 2a6 6 0 0 1 6 6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-        Processing…
-      `;
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="animation:spin 1s linear infinite"><circle cx="8" cy="8" r="6" stroke="rgba(255,255,255,0.3)" stroke-width="2"/><path d="M8 2a6 6 0 0 1 6 6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg> Processing…`;
 
       const { error } = await stripe.confirmPayment({
         elements,
@@ -402,8 +380,16 @@
             billing_details: {
               name: `${firstName} ${lastName}`,
               email,
+              phone,
+              address: { line1, line2: line2 || null, city, postal_code: postcode, country },
             },
           },
+          shipping: {
+            name: `${firstName} ${lastName}`,
+            phone,
+            address: { line1, line2: line2 || null, city, postal_code: postcode, country },
+          },
+          receipt_email: email,
         },
       });
 
@@ -412,25 +398,24 @@
         errorEl.classList.add('visible');
         const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
         btn.disabled = false;
-        btn.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4.5" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 4.5V3.5a3.5 3.5 0 1 1 7 0v1" stroke="currentColor" stroke-width="1.4"/><path d="M1 8h14" stroke="currentColor" stroke-width="1.4"/></svg>
-          Pay $${total.toFixed(2)} NZD
-        `;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4.5" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 4.5V3.5a3.5 3.5 0 1 1 7 0v1" stroke="currentColor" stroke-width="1.4"/><path d="M1 8h14" stroke="currentColor" stroke-width="1.4"/></svg> Pay $${total.toFixed(2)} NZD`;
       }
     });
 
-    // Clear error state on input
-    ['first-name','last-name','email'].forEach(id => {
+    function showError(msg, fieldId) {
+      const errorEl = document.getElementById('error-msg');
+      errorEl.textContent = msg;
+      errorEl.classList.add('visible');
+      if (fieldId) document.getElementById(fieldId).classList.add('error');
+    }
+
+    ['first-name','last-name','email','phone','address-line1','city','postcode'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
         document.getElementById(id).classList.remove('error');
         document.getElementById('error-msg').classList.remove('visible');
       });
     });
   </script>
-
-  <style>
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
 
 </body>
 </html>
