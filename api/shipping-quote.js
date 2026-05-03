@@ -41,7 +41,8 @@ module.exports = async function handler(req, res) {
     const r = nzRate(qty || 1);
     rate = { rate_id: 'NZ', provider: 'NZ Post', service: r.service, price: r.price, estimated_days: null };
   } else if (country === 'AU') {
-    rate = { rate_id: 'AU', provider: 'NZ Post', service: 'Economy International', price: 16.00, estimated_days: null };
+    const auPrice = qty <= 3 ? 16.00 : qty <= 6 ? 18.00 : 22.00;
+    rate = { rate_id: 'AU', provider: 'NZ Post', service: 'Economy International', price: auPrice, estimated_days: null };
   } else if (INTERNATIONAL[country]) {
     rate = { rate_id: country, provider: 'NZ Post', service: 'International Tracked', price: INTERNATIONAL[country], estimated_days: null };
   } else {
