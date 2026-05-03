@@ -198,10 +198,12 @@
     .size-opt-btn:hover { border-color: var(--accent); color: var(--accent); }
     .size-opt-btn.selected { border-color: var(--accent); background: rgba(44,94,46,0.06); color: var(--accent); }
     .size-add-btn {
-      width: 100%; background: var(--fg); color: white; border: none;
+      width: 100%; background: var(--accent); color: white; border: none;
       padding: 0.9rem; border-radius: 100px; font-size: 0.9rem; font-weight: 600;
-      cursor: pointer; font-family: var(--font); transition: background 0.2s;
+      cursor: pointer; font-family: var(--font); transition: background 0.2s, transform 0.15s;
     }
+    .size-add-btn:hover:not(:disabled) { background: #1e4420; transform: translateY(-1px); }
+    .size-add-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
     .size-add-btn:hover { background: var(--accent); }
     .size-cancel-btn {
       width: 100%; background: none; border: none; margin-top: 0.75rem;
@@ -811,7 +813,7 @@
 
   <!-- NAV -->
   <nav id="navbar">
-    <a href="#" class="nav-brand">Nine<span>2</span>Five</a>
+    <a href="/" class="nav-brand">Nine<span>2</span>Five</a>
     <ul class="nav-links">
       <li><a href="#collection">Buy</a></li>
       <li><a href="#gallery">Gallery</a></li>
@@ -893,7 +895,7 @@
           <p class="section-label">The Collection</p>
           <h2 class="section-title">Designs that tell<br>a story</h2>
         </div>
-        <a href="#" class="btn-ghost">
+        <a href="#collection" class="btn-ghost">
           View all designs
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5h10M7.5 2.5l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
@@ -1061,19 +1063,19 @@
           <div class="footer-col">
             <h4>Shop</h4>
             <ul>
-              <li><a href="#">All Socks</a></li>
-              <li><a href="#">New Arrivals</a></li>
-              <li><a href="#">Bestsellers</a></li>
-              <li><a href="#">Gift Cards</a></li>
+              <li><a href="#collection">All Socks</a></li>
+              <li><a href="#collection">New Arrivals</a></li>
+              <li><a href="#collection">Bestsellers</a></li>
+              <li><a href="#gift">Gift Cards</a></li>
             </ul>
           </div>
           <div class="footer-col">
             <h4>About</h4>
             <ul>
-              <li><a href="#">Our Vision</a></li>
-              <li><a href="#">Gallery</a></li>
-              <li><a href="#">Stockists</a></li>
-              <li><a href="#">Contact</a></li>
+              <li><a href="#vision">Our Vision</a></li>
+              <li><a href="#gallery">Gallery</a></li>
+              <li><a href="#collection">Stockists</a></li>
+              <li><a href="mailto:nine2five.co.nz@gmail.com">Contact</a></li>
             </ul>
           </div>
           <div class="footer-col">
