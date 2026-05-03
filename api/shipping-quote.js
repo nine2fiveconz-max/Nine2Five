@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
   const r = await fetch(`${ESHIP_BASE}/quotation`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${ESHIP_API_KEY}`,
+      'Ocp-Apim-Subscription-Key': ESHIP_API_KEY,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
