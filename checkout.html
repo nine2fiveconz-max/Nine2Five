@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout — Nine2Five</title>
   <script src="https://js.stripe.com/v3/"></script>
-  <script src="https://api.addressfinder.io/assets/v3/widget.js" async></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
@@ -77,10 +76,21 @@
     .field-input::placeholder { color: var(--muted); }
     .field-input.error { border-color: var(--error); }
 
-    /* AddressFinder dropdown override */
-    .af_list { border-radius: 0.75rem !important; border: 1.5px solid var(--border) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important; font-family: var(--font) !important; overflow: hidden; }
-    .af_item { padding: 0.65rem 1rem !important; font-size: 0.875rem !important; }
-    .af_item:hover, .af_item_active { background: #f0f5f0 !important; color: var(--accent) !important; }
+    /* Address autocomplete dropdown */
+    .addr-wrap { position: relative; }
+    .addr-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 100;
+      background: var(--white); border: 1.5px solid var(--border); border-radius: 0.75rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.09); overflow: hidden; display: none;
+    }
+    .addr-dropdown.open { display: block; }
+    .addr-item {
+      padding: 0.7rem 1rem; font-size: 0.875rem; cursor: pointer;
+      border-bottom: 1px solid var(--border); transition: background 0.15s; line-height: 1.4;
+    }
+    .addr-item:last-child { border-bottom: none; }
+    .addr-item:hover, .addr-item.active { background: #f0f5f0; color: var(--accent); }
+    .addr-loading { padding: 0.7rem 1rem; font-size: 0.8rem; color: var(--muted); }
 
     #payment-element { margin-bottom: 1.5rem; }
 
@@ -184,9 +194,10 @@
       <div class="form-section">
         <div class="form-section-title">Delivery Address</div>
         <div class="field-group">
-          <div class="field-wrap">
+          <div class="field-wrap addr-wrap">
             <label class="field-label" for="address-line1">Street address</label>
-            <input class="field-input" id="address-line1" type="text" placeholder="Start typing your address…" autocomplete="address-line1">
+            <input class="field-input" id="address-line1" type="text" placeholder="Start typing your address…" autocomplete="off">
+            <div class="addr-dropdown" id="addr-dropdown"></div>
           </div>
           <div class="field-wrap">
             <label class="field-label" for="address-line2">Apartment, unit, suite (optional)</label>
@@ -323,56 +334,95 @@
       }
     }
 
-    // ── AddressFinder autocomplete (NZ + AU) ──
-    let afWidget = null;
+    // ── Address autocomplete ──
+    let addrDebounce = null;
+    let pendingSuggestions = [];
 
     function initAddressFinder() {
-      function attach() {
-        if (typeof AddressFinder === 'undefined') { setTimeout(attach, 200); return; }
-        mountWidget(document.getElementById('country').value);
-      }
-      attach();
+      const input    = document.getElementById('address-line1');
+      const dropdown = document.getElementById('addr-dropdown');
 
-      // Re-mount when country changes
-      document.getElementById('country').addEventListener('change', function() {
-        mountWidget(this.value);
-        // Clear address fields when switching country
-        ['address-line1','address-line2','suburb','city','postcode'].forEach(id => {
-          document.getElementById(id).value = '';
-        });
+      input.addEventListener('input', () => {
+        clearTimeout(addrDebounce);
+        const q = input.value.trim();
+        if (q.length < 3) { closeDropdown(); return; }
+        addrDebounce = setTimeout(() => fetchSuggestions(q), 280);
+      });
+
+      input.addEventListener('keydown', e => {
+        const items = dropdown.querySelectorAll('.addr-item');
+        const active = dropdown.querySelector('.addr-item.active');
+        let idx = [...items].indexOf(active);
+        if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx + 1, items.length - 1); items[idx]?.classList.add('active'); active?.classList.remove('active'); }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); idx = Math.max(idx - 1, 0); items[idx]?.classList.add('active'); active?.classList.remove('active'); }
+        if (e.key === 'Enter' && active) { e.preventDefault(); active.click(); }
+        if (e.key === 'Escape') closeDropdown();
+      });
+
+      document.addEventListener('click', e => {
+        if (!e.target.closest('.addr-wrap')) closeDropdown();
+      });
+
+      document.getElementById('country').addEventListener('change', () => {
+        ['address-line1','address-line2','suburb','city','postcode'].forEach(id => document.getElementById(id).value = '');
+        closeDropdown();
       });
     }
 
-    function mountWidget(country) {
-      // AddressFinder only supports NZ and AU
-      if (country !== 'NZ' && country !== 'AU') {
-        if (afWidget) { afWidget.destroy(); afWidget = null; }
-        return;
-      }
-      if (afWidget) { afWidget.destroy(); afWidget = null; }
+    async function fetchSuggestions(q) {
+      const country  = document.getElementById('country').value;
+      const dropdown = document.getElementById('addr-dropdown');
+      dropdown.innerHTML = '<div class="addr-loading">Searching…</div>';
+      dropdown.classList.add('open');
 
-      afWidget = new AddressFinder.Widget(
-        document.getElementById('address-line1'),
-        'DEMO', // Replace with your AddressFinder API key from addressfinder.nz
-        country,
-        { show_addresses: true, address_params: {} }
-      );
+      try {
+        const res  = await fetch(`/api/address-suggest?q=${encodeURIComponent(q)}&country=${country}`);
+        const data = await res.json();
+        pendingSuggestions = data.suggestions || [];
+        renderDropdown(pendingSuggestions, country);
+      } catch (_) { closeDropdown(); }
+    }
 
-      afWidget.on('result:select', function(fullAddress, meta) {
-        if (country === 'NZ') {
-          document.getElementById('address-line1').value = meta.address_line_1 || meta.address_line1 || '';
-          document.getElementById('suburb').value        = meta.suburb || '';
-          document.getElementById('city').value          = meta.city || '';
-          document.getElementById('postcode').value      = meta.postcode || '';
-        } else {
-          // AU metadata field names
-          document.getElementById('address-line1').value = meta.address_line_1 || meta.address_line1 || '';
-          document.getElementById('suburb').value        = meta.locality_name || meta.suburb || '';
-          document.getElementById('city').value          = meta.locality_name || meta.city || '';
-          document.getElementById('postcode').value      = meta.postcode || '';
-        }
-        document.getElementById('address-line2').focus();
+    function renderDropdown(suggestions, country) {
+      const dropdown = document.getElementById('addr-dropdown');
+      if (!suggestions.length) { dropdown.innerHTML = '<div class="addr-loading">No addresses found</div>'; return; }
+      dropdown.innerHTML = suggestions.map((s, i) => `<div class="addr-item" data-idx="${i}">${s.label}</div>`).join('');
+      dropdown.querySelectorAll('.addr-item').forEach(el => {
+        el.addEventListener('click', () => selectSuggestion(parseInt(el.dataset.idx), country));
       });
+    }
+
+    async function selectSuggestion(idx, country) {
+      const s = pendingSuggestions[idx];
+      if (!s) return;
+
+      if (country === 'NZ' && s.addressId) {
+        // Fetch full NZ Post details
+        document.getElementById('address-line1').value = s.label;
+        closeDropdown();
+        try {
+          const res  = await fetch(`/api/address-suggest?addressId=${encodeURIComponent(s.addressId)}&country=NZ`);
+          const data = await res.json();
+          document.getElementById('address-line1').value = data.street1 || s.label;
+          document.getElementById('suburb').value        = data.suburb || '';
+          document.getElementById('city').value          = data.city || '';
+          document.getElementById('postcode').value      = data.postcode || '';
+        } catch (_) {}
+      } else {
+        // AU / direct fill
+        document.getElementById('address-line1').value = s.street1 || s.label;
+        document.getElementById('suburb').value        = s.suburb || '';
+        document.getElementById('city').value          = s.city || '';
+        document.getElementById('postcode').value      = s.postcode || '';
+        closeDropdown();
+      }
+      document.getElementById('address-line2').focus();
+    }
+
+    function closeDropdown() {
+      const d = document.getElementById('addr-dropdown');
+      d.classList.remove('open');
+      d.innerHTML = '';
     }
 
     // ── Submit ──
