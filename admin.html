@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Nine2Five</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F6F2EC; --fg: #1A1714; --accent: #2C5E2E; --gold: #B8893A;
+      --muted: #8A7F74; --border: #E2D9CE; --white: #FDFBF8;
+      --red: #C0392B; --font: 'Outfit', sans-serif;
+    }
+    body { background: var(--bg); color: var(--fg); font-family: var(--font); min-height: 100dvh; }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 2rem;
+    }
+    .login-box {
+      background: var(--white); border: 1px solid var(--border); border-radius: 1.5rem;
+      padding: 3rem 2.5rem; width: 100%; max-width: 400px; text-align: center;
+    }
+    .login-box h1 { font-size: 1.75rem; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 0.5rem; }
+    .login-box h1 span { color: var(--accent); }
+    .login-box p { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+    .login-box input {
+      width: 100%; padding: 0.85rem 1rem; border: 1px solid var(--border); border-radius: 0.75rem;
+      font-family: var(--font); font-size: 0.95rem; background: var(--bg); color: var(--fg);
+      margin-bottom: 1rem; outline: none; transition: border-color 0.2s;
+    }
+    .login-box input:focus { border-color: var(--accent); }
+    .login-box button {
+      width: 100%; padding: 0.9rem; background: var(--accent); color: white;
+      border: none; border-radius: 0.75rem; font-family: var(--font); font-size: 0.95rem;
+      font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.15s;
+    }
+    .login-box button:hover { background: #1e4420; transform: translateY(-1px); }
+    .login-error { color: var(--red); font-size: 0.8rem; margin-top: 0.75rem; display: none; }
+
+    /* ── MAIN ── */
+    #main { display: none; }
+    header {
+      background: rgba(246,242,236,0.95); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); padding: 1rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .brand { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.03em; }
+    .brand span { color: var(--accent); }
+    .header-actions { display: flex; align-items: center; gap: 1rem; }
+    .pill-btn {
+      padding: 0.4rem 1rem; border-radius: 100px; font-family: var(--font);
+      font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .pill-btn-outline { background: none; border: 1px solid var(--border); color: var(--fg); }
+    .pill-btn-outline:hover { border-color: var(--fg); }
+    .pill-btn-solid { background: var(--accent); border: none; color: white; }
+    .pill-btn-solid:hover { background: #1e4420; }
+
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 2rem; background: var(--white); }
+    .tab {
+      padding: 1rem 1.5rem; font-size: 0.875rem; font-weight: 600; cursor: pointer;
+      border-bottom: 2px solid transparent; color: var(--muted); transition: all 0.2s;
+      background: none; border-top: none; border-left: none; border-right: none;
+      font-family: var(--font);
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-badge {
+      background: var(--accent); color: white; border-radius: 100px;
+      font-size: 0.65rem; font-weight: 700; padding: 1px 6px; margin-left: 0.4rem;
+    }
+
+    /* ── PAGE ── */
+    .page { display: none; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+    .page.active { display: block; }
+
+    /* ── STATS ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: var(--white); border: 1px solid var(--border); border-radius: 1rem;
+      padding: 1.5rem; display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .stat-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .stat-value { font-size: 2rem; font-weight: 900; letter-spacing: -0.04em; }
+    .stat-sub { font-size: 0.8rem; color: var(--muted); }
+
+    /* ── TABLE ── */
+    .section-title {
+      font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 1rem;
+    }
+    .table-wrap { background: var(--white); border: 1px solid var(--border); border-radius: 1rem; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left; font-size: 0.7rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em; padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    td { padding: 1rem 1.25rem; font-size: 0.875rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 0.2rem 0.6rem;
+      border-radius: 100px; font-size: 0.7rem; font-weight: 600;
+    }
+    .badge-paid { background: #d4edda; color: #1e4420; }
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .badge-refunded { background: #f8d7da; color: #721c24; }
+
+    .items-list { font-size: 0.8rem; color: var(--muted); max-width: 260px; line-height: 1.6; }
+
+    /* ── INVENTORY ── */
+    .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .inv-card {
+      background: var(--white); border: 1px solid var(--border); border-radius: 1rem;
+      padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;
+    }
+    .inv-img { width: 60px; height: 60px; object-fit: cover; border-radius: 0.5rem; flex-shrink: 0; background: var(--bg); }
+    .inv-info { flex: 1; min-width: 0; }
+    .inv-name { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.2rem; line-height: 1.3; }
+    .inv-size { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .stock-row { display: flex; align-items: center; gap: 0.5rem; }
+    .stock-label { font-size: 0.75rem; color: var(--muted); min-width: 36px; }
+    .stock-input {
+      width: 70px; padding: 0.35rem 0.6rem; border: 1px solid var(--border);
+      border-radius: 0.5rem; font-family: var(--font); font-size: 0.875rem;
+      font-weight: 600; text-align: center; background: var(--bg); color: var(--fg);
+      outline: none; transition: border-color 0.2s;
+    }
+    .stock-input:focus { border-color: var(--accent); }
+    .stock-input.low { border-color: var(--gold); color: var(--gold); }
+    .stock-input.out { border-color: var(--red); color: var(--red); }
+    .save-btn {
+      padding: 0.35rem 0.75rem; background: var(--accent); color: white; border: none;
+      border-radius: 0.5rem; font-family: var(--font); font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; transition: background 0.2s, opacity 0.2s; opacity: 0;
+    }
+    .save-btn.visible { opacity: 1; }
+    .save-btn:hover { background: #1e4420; }
+    .saved-tick { font-size: 0.75rem; color: var(--accent); opacity: 0; transition: opacity 0.3s; }
+    .saved-tick.visible { opacity: 1; }
+
+    .empty-state {
+      padding: 4rem 2rem; text-align: center; color: var(--muted); font-size: 0.9rem;
+    }
+    .spinner {
+      display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-row { text-align: center; padding: 3rem; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Nine<span>2Five</span></h1>
+    <p>Admin Portal — enter your password to continue</p>
+    <input type="password" id="pwd-input" placeholder="Password" autocomplete="current-password">
+    <button id="login-btn">Sign in</button>
+    <p class="login-error" id="login-error">Incorrect password. Try again.</p>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <header>
+    <div class="brand">Nine<span>2Five</span> Admin</div>
+    <div class="header-actions">
+      <button class="pill-btn pill-btn-outline" onclick="refresh()">Refresh</button>
+      <button class="pill-btn pill-btn-outline" onclick="logout()">Sign out</button>
+      <a href="/" class="pill-btn pill-btn-solid" style="text-decoration:none">View store</a>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="orders">Orders <span class="tab-badge" id="order-count">0</span></button>
+    <button class="tab" data-tab="inventory">Inventory</button>
+  </div>
+
+  <!-- ORDERS PAGE -->
+  <div class="page active" id="page-orders">
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value" id="stat-revenue">—</div><div class="stat-sub">NZD all time</div></div>
+      <div class="stat-card"><div class="stat-label">Total Orders</div><div class="stat-value" id="stat-orders">—</div><div class="stat-sub">completed payments</div></div>
+      <div class="stat-card"><div class="stat-label">Avg. Order</div><div class="stat-value" id="stat-avg">—</div><div class="stat-sub">NZD per order</div></div>
+      <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value" id="stat-today">—</div><div class="stat-sub">orders placed</div></div>
+    </div>
+
+    <div class="section-title">All Orders</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Email</th>
+            <th>Items</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Stripe ID</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr class="loading-row"><td colspan="7"><span class="spinner"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- INVENTORY PAGE -->
+  <div class="page" id="page-inventory">
+    <div class="section-title" style="margin-bottom:1.5rem">Stock Levels — click a number to edit, then Save</div>
+    <div class="inv-grid" id="inv-grid">
+      <div class="loading-row"><span class="spinner"></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ADMIN_TOKEN_KEY = 'n2f-admin-token';
+  let token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+
+  // ── AUTH ──
+  if (token) showMain();
+
+  document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  document.getElementById('login-btn').addEventListener('click', login);
+
+  async function login() {
+    const pwd = document.getElementById('pwd-input').value;
+    if (!pwd) return;
+    // Verify by hitting admin endpoint
+    const res = await fetch('/api/admin-orders', { headers: { 'X-Admin-Token': pwd } });
+    if (res.status === 401) {
+      document.getElementById('login-error').style.display = 'block';
+      return;
+    }
+    token = pwd;
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+    document.getElementById('login-error').style.display = 'none';
+    showMain();
+    loadOrders(await res.json());
+    loadInventory();
+  }
+
+  function logout() {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    token = '';
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('pwd-input').value = '';
+  }
+
+  function showMain() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    loadOrders();
+    loadInventory();
+  }
+
+  // ── TABS ──
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('page-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  function refresh() {
+    loadOrders();
+    loadInventory();
+  }
+
+  // ── ORDERS ──
+  async function loadOrders(data) {
+    if (!data) {
+      const res = await fetch('/api/admin-orders', { headers: { 'X-Admin-Token': token } });
+      if (!res.ok) return;
+      data = await res.json();
+    }
+
+    // Stats
+    const total = data.reduce((s, o) => s + parseFloat(o.amount_nzd || 0), 0);
+    const avg = data.length ? total / data.length : 0;
+    const today = data.filter(o => new Date(o.created_at).toDateString() === new Date().toDateString()).length;
+    document.getElementById('stat-revenue').textContent = '$' + total.toFixed(2);
+    document.getElementById('stat-orders').textContent = data.length;
+    document.getElementById('stat-avg').textContent = '$' + avg.toFixed(2);
+    document.getElementById('stat-today').textContent = today;
+    document.getElementById('order-count').textContent = data.length;
+
+    const tbody = document.getElementById('orders-tbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No orders yet. They will appear here after the first payment.</div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(o => {
+      const items = Array.isArray(o.items) ? o.items : (typeof o.items === 'string' ? o.items : '—');
+      const itemsStr = Array.isArray(items)
+        ? items.map(i => `${i.name} (${i.size}) ×${i.qty||1}`).join('<br>')
+        : items;
+      const date = new Date(o.created_at);
+      const dateStr = date.toLocaleDateString('en-NZ', { day:'numeric', month:'short', year:'numeric' });
+      const timeStr = date.toLocaleTimeString('en-NZ', { hour:'2-digit', minute:'2-digit' });
+      const badge = `<span class="badge badge-${o.status || 'paid'}">${o.status || 'paid'}</span>`;
+      const piShort = o.stripe_pi_id ? o.stripe_pi_id.replace('pi_','').slice(0,12)+'…' : '—';
+      return `<tr>
+        <td style="white-space:nowrap">${dateStr}<br><span style="font-size:0.75rem;color:var(--muted)">${timeStr}</span></td>
+        <td>${o.customer_name || '—'}</td>
+        <td style="font-size:0.8rem">${o.customer_email || '—'}</td>
+        <td><div class="items-list">${itemsStr}</div></td>
+        <td style="font-weight:700">$${parseFloat(o.amount_nzd).toFixed(2)}</td>
+        <td>${badge}</td>
+        <td style="font-size:0.75rem;color:var(--muted);font-family:monospace">${piShort}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── INVENTORY ──
+  async function loadInventory() {
+    const res = await fetch('/api/admin-inventory', { headers: { 'X-Admin-Token': token } });
+    if (!res.ok) return;
+    const data = await res.json();
+    renderInventory(data);
+  }
+
+  function renderInventory(data) {
+    const grid = document.getElementById('inv-grid');
+    if (!data.length) {
+      grid.innerHTML = '<div class="empty-state">No inventory items found.</div>';
+      return;
+    }
+
+    grid.innerHTML = data.map(item => {
+      const stockClass = item.stock === 0 ? 'out' : item.stock <= 5 ? 'low' : '';
+      return `<div class="inv-card" data-id="${item.id}">
+        <img class="inv-img" src="${item.img_url || ''}" alt="${item.product_name}" onerror="this.style.display='none'">
+        <div class="inv-info">
+          <div class="inv-name">${item.product_name}</div>
+          <div class="inv-size">Size: ${item.size} · $${parseFloat(item.price).toFixed(2)}</div>
+          <div class="stock-row">
+            <span class="stock-label">Stock</span>
+            <input class="stock-input ${stockClass}" type="number" min="0" value="${item.stock}"
+              data-original="${item.stock}" data-id="${item.id}"
+              oninput="onStockChange(this)">
+            <button class="save-btn" onclick="saveStock(this)" data-id="${item.id}">Save</button>
+            <span class="saved-tick" id="tick-${item.id}">Saved</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function onStockChange(input) {
+    const card = input.closest('.inv-card');
+    const btn = card.querySelector('.save-btn');
+    const changed = input.value !== input.dataset.original;
+    btn.classList.toggle('visible', changed);
+    // Update colour
+    const v = parseInt(input.value, 10);
+    input.className = 'stock-input' + (v === 0 ? ' out' : v <= 5 ? ' low' : '');
+  }
+
+  async function saveStock(btn) {
+    const id = btn.dataset.id;
+    const card = btn.closest('.inv-card');
+    const input = card.querySelector('.stock-input');
+    const stock = parseInt(input.value, 10);
+
+    btn.textContent = '…';
+    btn.disabled = true;
+
+    const res = await fetch('/api/admin-inventory', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+      body: JSON.stringify({ id, stock }),
+    });
+
+    btn.textContent = 'Save';
+    btn.disabled = false;
+
+    if (res.ok) {
+      input.dataset.original = stock;
+      btn.classList.remove('visible');
+      const tick = document.getElementById('tick-' + id);
+      tick.classList.add('visible');
+      setTimeout(() => tick.classList.remove('visible'), 2000);
+    }
+  }
+</script>
+</body>
+</html>

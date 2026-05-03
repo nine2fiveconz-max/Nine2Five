@@ -17,6 +17,7 @@ module.exports = async function handler(req, res) {
     currency: 'nzd',
     metadata: {
       order: items.map(i => `${i.name} (${i.size}) x${i.qty}`).join(', ').slice(0, 499),
+      items_json: JSON.stringify(items).slice(0, 499),
     },
   });
 
