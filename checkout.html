@@ -93,6 +93,24 @@
     .addr-item:hover, .addr-item.active { background: #f0f5f0; color: var(--accent); }
     .addr-loading { padding: 0.7rem 1rem; font-size: 0.8rem; color: var(--muted); }
 
+    /* ── DISCOUNT CODE ── */
+    .discount-wrap { display: flex; gap: 0.6rem; }
+    .discount-wrap .field-input { flex: 1; text-transform: uppercase; letter-spacing: 0.06em; }
+    .discount-apply-btn {
+      background: var(--fg); color: white; border: none;
+      padding: 0.75rem 1.25rem; border-radius: 0.625rem; font-size: 0.875rem;
+      font-weight: 600; cursor: pointer; font-family: var(--font);
+      transition: background 0.2s, transform 0.15s; white-space: nowrap;
+    }
+    .discount-apply-btn:hover { background: var(--accent); }
+    .discount-apply-btn:active { transform: scale(0.98); }
+    .discount-apply-btn:disabled { opacity: 0.5; cursor: wait; }
+    .discount-msg { font-size: 0.8rem; margin-top: 0.5rem; min-height: 1.2em; }
+    .discount-msg.success { color: var(--accent); font-weight: 600; }
+    .discount-msg.error { color: var(--error); }
+    .discount-clear { background: none; border: none; color: var(--muted); font-size: 0.75rem; cursor: pointer; text-decoration: underline; margin-left: 0.5rem; font-family: var(--font); }
+    .discount-clear:hover { color: var(--error); }
+
     #payment-element { margin-bottom: 1.5rem; }
 
     .pay-btn {
@@ -318,7 +336,17 @@
         </div>
       </div>
 
-      <!-- 4. PAYMENT -->
+      <!-- 4. DISCOUNT CODE -->
+      <div class="form-section">
+        <div class="form-section-title">Discount Code</div>
+        <div class="discount-wrap">
+          <input class="field-input" id="discount-input" type="text" placeholder="Enter code" autocomplete="off" maxlength="32">
+          <button class="discount-apply-btn" id="discount-apply-btn" type="button">Apply</button>
+        </div>
+        <p class="discount-msg" id="discount-msg"></p>
+      </div>
+
+      <!-- 5. PAYMENT -->
       <div class="form-section">
         <div class="form-section-title">Payment</div>
         <div id="payment-element"></div>
@@ -346,6 +374,8 @@
     let selectedRate = null;
     let paymentReady = false;
     let ratesFetchDebounce = null;
+    let discountCents = 0;
+    let discountLabel = '';
     const cart = JSON.parse(localStorage.getItem('n2f-cart') || '[]');
 
     if (cart.length === 0) {
@@ -392,10 +422,15 @@
       }
 
       const totalPairs = cart.reduce((s, i) => s + (i.qty || 1), 0);
+      const discountRow = discountCents > 0
+        ? `<div class="total-row" style="color:var(--accent)"><span>Discount (${discountLabel})</span><span style="font-weight:600">−$${(discountCents/100).toFixed(2)} NZD</span></div>`
+        : '';
+      const grandTotal = Math.max(0, total - discountCents / 100);
       document.getElementById('summary-totals').innerHTML = `
         <div class="total-row"><span>Subtotal (${totalPairs} ${totalPairs === 1 ? 'pair' : 'pairs'})</span><span>$${subtotal.toFixed(2)} NZD</span></div>
         ${shippingRow}
-        <div class="total-row grand"><span>Total</span><span>$${total.toFixed(2)} NZD</span></div>`;
+        ${discountRow}
+        <div class="total-row grand"><span>Total</span><span>$${grandTotal.toFixed(2)} NZD</span></div>`;
     }
 
     // ── Stripe init ──
@@ -451,7 +486,7 @@
         btn.innerHTML = `${lockSvg} Select a shipping option`;
         return;
       }
-      const total = cart.reduce((s, i) => s + i.price * i.qty, 0) + selectedRate.price;
+      const total = Math.max(0, cart.reduce((s, i) => s + i.price * i.qty, 0) + selectedRate.price - discountCents / 100);
       btn.disabled = false;
       btn.innerHTML = `${lockSvg} Pay $${total.toFixed(2)} NZD`;
     }
@@ -629,16 +664,81 @@
       updatePayButton();
 
       if (clientSecret && rate) {
-        try {
-          await fetch('/api/update-payment-intent', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clientSecret, newAmount: baseAmountCents + shippingCents }),
-          });
-          if (elements) await elements.fetchUpdates();
-        } catch (_) {}
+        await syncPaymentIntent();
       }
     }
+
+    async function syncPaymentIntent() {
+      if (!clientSecret) return;
+      const newAmount = Math.max(50, baseAmountCents + shippingCents - discountCents);
+      try {
+        await fetch('/api/update-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientSecret, newAmount }),
+        });
+        if (elements) await elements.fetchUpdates();
+      } catch (_) {}
+    }
+
+    // ── Discount code ──
+    document.getElementById('discount-apply-btn').addEventListener('click', async () => {
+      const input   = document.getElementById('discount-input');
+      const msgEl   = document.getElementById('discount-msg');
+      const btn     = document.getElementById('discount-apply-btn');
+      const code    = input.value.trim();
+      if (!code) return;
+
+      btn.disabled = true;
+      btn.textContent = '…';
+      msgEl.className = 'discount-msg';
+      msgEl.textContent = '';
+
+      try {
+        const subtotalCents = baseAmountCents;
+        const res  = await fetch('/api/discount', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, subtotalCents }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          msgEl.className = 'discount-msg error';
+          msgEl.textContent = data.error || 'Invalid code';
+          discountCents = 0; discountLabel = '';
+        } else {
+          discountCents = data.discountCents;
+          discountLabel = data.label;
+          msgEl.className = 'discount-msg success';
+          msgEl.innerHTML = `${data.label} applied! <button class="discount-clear" id="discount-clear">Remove</button>`;
+          input.disabled = true;
+          document.getElementById('discount-clear')?.addEventListener('click', () => {
+            discountCents = 0; discountLabel = '';
+            input.value = ''; input.disabled = false;
+            msgEl.className = 'discount-msg'; msgEl.textContent = '';
+            const summaryRate = selectedRate ? { label: `${selectedRate.provider} — ${selectedRate.service}`, price: selectedRate.price } : null;
+            renderSummary(summaryRate);
+            updatePayButton();
+            syncPaymentIntent();
+          });
+          const summaryRate = selectedRate ? { label: `${selectedRate.provider} — ${selectedRate.service}`, price: selectedRate.price } : null;
+          renderSummary(summaryRate);
+          updatePayButton();
+          await syncPaymentIntent();
+        }
+      } catch (_) {
+        msgEl.className = 'discount-msg error';
+        msgEl.textContent = 'Could not apply code. Try again.';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Apply';
+    });
+
+    document.getElementById('discount-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('discount-apply-btn').click();
+    });
 
     // ── Submit ──
     document.getElementById('pay-btn').addEventListener('click', async () => {
