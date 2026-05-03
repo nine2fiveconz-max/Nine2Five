@@ -38,6 +38,11 @@ module.exports = async function handler(req, res) {
     }],
   };
 
+  if (!ESHIP_API_KEY) {
+    console.error('NZPOST_ESHIP_API_KEY is not set');
+    return res.status(500).json({ error: 'Shipping not configured', detail: 'Missing API key' });
+  }
+
   const r = await fetch(`${ESHIP_BASE}/quotation`, {
     method: 'POST',
     headers: {
@@ -48,7 +53,10 @@ module.exports = async function handler(req, res) {
   });
 
   const data = await r.json();
-  if (!r.ok) return res.status(r.status).json({ error: 'Could not fetch rates', detail: data });
+  if (!r.ok) {
+    console.error('eShip quotation error', r.status, JSON.stringify(data));
+    return res.status(r.status).json({ error: 'Could not fetch rates', detail: data });
+  }
 
   const rates = (data.rates || data || [])
     .filter(r => r.amount || r.price)
