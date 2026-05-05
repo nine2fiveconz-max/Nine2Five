@@ -704,7 +704,7 @@
       phone: document.getElementById('ship-phone').value,
     };
 
-    const res = await fetch('/api/nzpost-quote', {
+    const res = await fetch('/api/nzpost?action=quote', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
       body: JSON.stringify({ address_to, weight_kg: parseFloat(document.getElementById('ship-weight').value) }),
@@ -758,7 +758,7 @@
       phone: document.getElementById('ship-phone').value,
     };
 
-    const res = await fetch('/api/nzpost-ship', {
+    const res = await fetch('/api/nzpost?action=ship', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
       body: JSON.stringify({ order_id: activeOrder.id, rate_id: selectedRateId, address_to }),

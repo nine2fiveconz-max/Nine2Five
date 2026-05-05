@@ -744,7 +744,7 @@
 
       try {
         const subtotalCents = baseAmountCents;
-        const res  = await fetch('/api/discount', {
+        const res  = await fetch('/api/update-payment-intent?action=discount', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, subtotalCents }),
