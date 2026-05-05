@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM — Nine2Five</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F6F2EC; --fg: #1A1714; --accent: #2C5E2E; --gold: #B8893A;
+      --muted: #8A7F74; --border: #E2D9CE; --white: #FDFBF8; --error: #c0392b;
+      --sidebar: #1A1714; --font: 'Outfit', sans-serif;
+    }
+    body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.5; min-height: 100dvh; }
+
+    /* ── LOGIN ── */
+    .login-screen {
+      min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+    }
+    .login-card {
+      background: var(--white); border: 1px solid var(--border); border-radius: 1.25rem;
+      padding: 2.5rem; width: 360px; display: flex; flex-direction: column; gap: 1.5rem;
+    }
+    .login-logo { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.03em; }
+    .login-logo span { color: var(--accent); }
+    .login-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.03em; }
+    .login-subtitle { font-size: 0.85rem; color: var(--muted); margin-top: -1rem; }
+    .login-field { display: flex; flex-direction: column; gap: 0.4rem; }
+    .login-label { font-size: 0.75rem; font-weight: 600; }
+    .login-input {
+      border: 1.5px solid var(--border); border-radius: 0.625rem; padding: 0.75rem 1rem;
+      font-family: var(--font); font-size: 0.9rem; color: var(--fg); background: var(--bg);
+      outline: none; transition: border-color 0.2s;
+    }
+    .login-input:focus { border-color: var(--accent); }
+    .login-btn {
+      background: var(--accent); color: white; border: none; border-radius: 100px;
+      padding: 0.85rem; font-family: var(--font); font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .login-btn:hover { background: #1e4420; }
+    .login-error { color: var(--error); font-size: 0.8rem; display: none; }
+    .login-error.show { display: block; }
+
+    /* ── SHELL ── */
+    .shell { display: none; min-height: 100dvh; }
+    .shell.visible { display: flex; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 220px; flex-shrink: 0; background: var(--sidebar); color: white;
+      display: flex; flex-direction: column; padding: 1.5rem 0; position: sticky;
+      top: 0; height: 100dvh; overflow-y: auto;
+    }
+    .sidebar-brand { padding: 0 1.25rem 1.5rem; font-size: 1rem; font-weight: 700; letter-spacing: -0.03em; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .sidebar-brand span { color: var(--accent); }
+    .sidebar-brand small { display: block; font-size: 0.65rem; font-weight: 400; color: rgba(255,255,255,0.4); margin-top: 0.1rem; letter-spacing: 0.1em; text-transform: uppercase; }
+    .sidebar-section { padding: 1rem 1.25rem 0.25rem; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1.25rem;
+      font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.6);
+      cursor: pointer; transition: background 0.15s, color 0.15s; border-radius: 0;
+      border: none; background: none; width: 100%; text-align: left; font-family: var(--font);
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+    .nav-item.active { background: rgba(44,94,46,0.3); color: white; }
+    .nav-item svg { opacity: 0.6; flex-shrink: 0; }
+    .nav-item.active svg { opacity: 1; }
+    .sidebar-footer { margin-top: auto; padding: 1rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.08); }
+    .logout-btn { font-size: 0.78rem; color: rgba(255,255,255,0.4); cursor: pointer; background: none; border: none; font-family: var(--font); }
+    .logout-btn:hover { color: rgba(255,255,255,0.7); }
+
+    /* ── MAIN ── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      padding: 1rem 2rem; background: var(--white); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    }
+    .topbar-title { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+    .topbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .search-bar {
+      display: flex; align-items: center; gap: 0.5rem; background: var(--bg);
+      border: 1.5px solid var(--border); border-radius: 0.625rem; padding: 0.5rem 0.875rem;
+    }
+    .search-bar input {
+      border: none; background: none; outline: none; font-family: var(--font);
+      font-size: 0.85rem; color: var(--fg); width: 220px;
+    }
+    .search-bar input::placeholder { color: var(--muted); }
+    .btn-primary {
+      background: var(--accent); color: white; border: none; border-radius: 0.625rem;
+      padding: 0.55rem 1rem; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      font-family: var(--font); display: flex; align-items: center; gap: 0.4rem;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #1e4420; }
+    .btn-ghost {
+      background: none; color: var(--fg); border: 1.5px solid var(--border); border-radius: 0.625rem;
+      padding: 0.5rem 0.875rem; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+      font-family: var(--font); transition: border-color 0.15s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .content { flex: 1; padding: 2rem; overflow-y: auto; }
+
+    /* ── STATS BAR ── */
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
+    .stat-card {
+      background: var(--white); border: 1px solid var(--border); border-radius: 0.875rem;
+      padding: 1.25rem 1.5rem;
+    }
+    .stat-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+    .stat-value { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; margin-top: 0.25rem; }
+    .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.1rem; }
+
+    /* ── CONTACTS TABLE ── */
+    .table-wrap { background: var(--white); border: 1px solid var(--border); border-radius: 0.875rem; overflow: hidden; }
+    .table-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .table-header-title { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+    .filter-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .pill {
+      padding: 0.25rem 0.75rem; border-radius: 100px; font-size: 0.72rem; font-weight: 600;
+      cursor: pointer; border: 1.5px solid var(--border); background: var(--bg); color: var(--muted);
+      transition: all 0.15s;
+    }
+    .pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 0.75rem 1.5rem; text-align: left; font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f9f6f2; }
+    tbody td { padding: 0.875rem 1.5rem; font-size: 0.875rem; vertical-align: middle; }
+    .contact-cell { display: flex; align-items: center; gap: 0.75rem; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; color: white;
+    }
+    .contact-name { font-weight: 600; font-size: 0.875rem; }
+    .contact-email { font-size: 0.75rem; color: var(--muted); }
+    .tag-list { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+    .tag {
+      padding: 0.15rem 0.55rem; border-radius: 100px; font-size: 0.68rem; font-weight: 600;
+      background: rgba(44,94,46,0.1); color: var(--accent);
+    }
+    .tag.wholesale { background: rgba(184,137,58,0.12); color: var(--gold); }
+    .tag.vip { background: rgba(44,94,46,0.2); color: var(--accent); }
+    .tag.lead { background: rgba(138,127,116,0.12); color: var(--muted); }
+    .empty-row td { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.875rem; }
+
+    /* ── CONTACT PANEL ── */
+    .panel-overlay {
+      position: fixed; inset: 0; background: rgba(26,23,20,0.4); z-index: 100;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .panel-overlay.open { opacity: 1; pointer-events: all; }
+    .contact-panel {
+      position: fixed; top: 0; right: 0; bottom: 0; width: 480px; background: var(--white);
+      z-index: 101; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .contact-panel.open { transform: translateX(0); }
+    .panel-head {
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .panel-close { background: none; border: none; cursor: pointer; color: var(--muted); padding: 0.25rem; }
+    .panel-close:hover { color: var(--fg); }
+    .panel-body { flex: 1; overflow-y: auto; }
+    .panel-section { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .panel-section-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.875rem; }
+    .profile-header { display: flex; align-items: center; gap: 1rem; }
+    .avatar-lg { width: 56px; height: 56px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+    .profile-name { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+    .profile-email { font-size: 0.8rem; color: var(--muted); }
+    .profile-phone { font-size: 0.8rem; color: var(--muted); }
+    .profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1rem; }
+    .profile-stat { background: var(--bg); border-radius: 0.625rem; padding: 0.75rem; text-align: center; }
+    .profile-stat-val { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+    .profile-stat-lbl { font-size: 0.65rem; color: var(--muted); margin-top: 0.1rem; }
+    .field-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .field-edit input, .field-edit select {
+      border: 1.5px solid var(--border); border-radius: 0.5rem; padding: 0.5rem 0.75rem;
+      font-family: var(--font); font-size: 0.82rem; color: var(--fg); background: var(--bg);
+      outline: none; width: 100%;
+    }
+    .field-edit input:focus { border-color: var(--accent); }
+    .tags-edit { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
+    .tag-toggle {
+      padding: 0.25rem 0.75rem; border-radius: 100px; font-size: 0.72rem; font-weight: 600;
+      cursor: pointer; border: 1.5px solid var(--border); background: var(--bg); color: var(--muted); transition: all 0.15s;
+    }
+    .tag-toggle.on { background: var(--accent); color: white; border-color: var(--accent); }
+    .save-row { margin-top: 0.75rem; }
+    .btn-save {
+      background: var(--accent); color: white; border: none; border-radius: 0.5rem;
+      padding: 0.5rem 1.25rem; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      font-family: var(--font); transition: background 0.2s;
+    }
+    .btn-save:hover { background: #1e4420; }
+    .order-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+    .order-row:last-child { border-bottom: none; }
+    .order-row-id { color: var(--muted); font-size: 0.75rem; }
+    .order-row-amount { font-weight: 700; }
+    .notes-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .note-item { background: var(--bg); border-radius: 0.625rem; padding: 0.75rem 1rem; position: relative; }
+    .note-content { font-size: 0.85rem; line-height: 1.5; }
+    .note-time { font-size: 0.7rem; color: var(--muted); margin-top: 0.3rem; }
+    .note-del { position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
+    .note-del:hover { color: var(--error); }
+    .note-form { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
+    .note-form textarea {
+      border: 1.5px solid var(--border); border-radius: 0.625rem; padding: 0.75rem;
+      font-family: var(--font); font-size: 0.85rem; color: var(--fg); background: var(--bg);
+      outline: none; resize: vertical; min-height: 80px; width: 100%;
+    }
+    .note-form textarea:focus { border-color: var(--accent); }
+
+    /* ── PIPELINE ── */
+    .pipeline-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; align-items: start; }
+    .pipeline-col { background: var(--white); border: 1px solid var(--border); border-radius: 0.875rem; overflow: hidden; }
+    .pipeline-col-head { padding: 0.875rem 1rem; border-bottom: 1px solid var(--border); }
+    .pipeline-col-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+    .pipeline-col-count { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+    .pipeline-cards { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem; min-height: 80px; }
+    .deal-card {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 0.625rem;
+      padding: 0.75rem; cursor: pointer; transition: border-color 0.15s;
+    }
+    .deal-card:hover { border-color: var(--accent); }
+    .deal-title { font-size: 0.82rem; font-weight: 600; }
+    .deal-contact { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+    .deal-value { font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-top: 0.4rem; }
+    .deal-actions { display: flex; gap: 0.3rem; margin-top: 0.5rem; }
+    .deal-move { background: none; border: 1px solid var(--border); border-radius: 0.4rem; padding: 0.2rem 0.5rem; font-size: 0.68rem; cursor: pointer; font-family: var(--font); color: var(--muted); transition: all 0.12s; }
+    .deal-move:hover { border-color: var(--accent); color: var(--accent); }
+    .pipeline-add { padding: 0.75rem; }
+    .pipeline-add-btn { width: 100%; background: none; border: 1.5px dashed var(--border); border-radius: 0.5rem; padding: 0.5rem; font-size: 0.78rem; color: var(--muted); cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+    .pipeline-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .stage-lead { border-top: 3px solid #8A7F74; }
+    .stage-contacted { border-top: 3px solid #B8893A; }
+    .stage-quoted { border-top: 3px solid #2980b9; }
+    .stage-won { border-top: 3px solid #2C5E2E; }
+    .stage-lost { border-top: 3px solid var(--error); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(26,23,20,0.5); z-index: 200;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: 1rem; padding: 2rem; width: 440px;
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+    .modal-fields { display: flex; flex-direction: column; gap: 0.875rem; }
+    .modal-field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .modal-label { font-size: 0.72rem; font-weight: 600; }
+    .modal-input {
+      border: 1.5px solid var(--border); border-radius: 0.5rem; padding: 0.65rem 0.875rem;
+      font-family: var(--font); font-size: 0.875rem; color: var(--fg); background: var(--bg); outline: none; width: 100%;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+    .btn-cancel { background: none; border: 1.5px solid var(--border); border-radius: 0.5rem; padding: 0.55rem 1rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: var(--font); }
+    .btn-cancel:hover { border-color: var(--muted); }
+
+    /* ── LOADING ── */
+    .loading { display: flex; align-items: center; justify-content: center; padding: 4rem; color: var(--muted); gap: 0.75rem; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 56px; }
+      .sidebar-brand, .sidebar-section, .nav-item span, .sidebar-footer { display: none; }
+      .nav-item { justify-content: center; padding: 0.75rem; }
+      .contact-panel { width: 100%; }
+      .pipeline-board { grid-template-columns: repeat(2, 1fr); }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Nine<span>2</span>Five</div>
+    <div>
+      <div class="login-title">CRM</div>
+      <div class="login-subtitle">Customer relationship management</div>
+    </div>
+    <div class="login-field">
+      <label class="login-label" for="pw">Password</label>
+      <input class="login-input" id="pw" type="password" placeholder="Enter admin password" autocomplete="current-password">
+    </div>
+    <div class="login-error" id="login-error">Incorrect password</div>
+    <button class="login-btn" id="login-btn">Sign in</button>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div class="shell" id="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">Nine<span>2</span>Five<small>CRM</small></div>
+    <div class="sidebar-section">Main</div>
+    <button class="nav-item active" data-tab="contacts" onclick="switchTab('contacts')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M2 13c0-3 2-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span>Contacts</span>
+    </button>
+    <button class="nav-item" data-tab="pipeline" onclick="switchTab('pipeline')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="3" height="9" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="6" y="2" width="3" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="11" y="6" width="3" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
+      <span>Pipeline</span>
+    </button>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- CONTACTS TAB -->
+    <div id="tab-contacts">
+      <div class="topbar">
+        <div class="topbar-title">Contacts</div>
+        <div class="topbar-actions">
+          <div class="search-bar">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#8A7F74" stroke-width="1.3"/><path d="M10 10l2.5 2.5" stroke="#8A7F74" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <input type="text" id="contact-search" placeholder="Search contacts…" oninput="filterContacts()">
+          </div>
+          <button class="btn-primary" onclick="openAddContact()">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Add contact
+          </button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="stats-bar" id="contact-stats"></div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <div class="table-header-title" id="contact-count">Loading…</div>
+            <div class="filter-pills">
+              <div class="pill active" onclick="setFilter('all', this)">All</div>
+              <div class="pill" onclick="setFilter('customer', this)">Customers</div>
+              <div class="pill" onclick="setFilter('lead', this)">Leads</div>
+              <div class="pill" onclick="setFilter('wholesale', this)">Wholesale</div>
+              <div class="pill" onclick="setFilter('vip', this)">VIP</div>
+            </div>
+          </div>
+          <div id="contacts-table-wrap">
+            <div class="loading">
+              <svg class="spin" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="rgba(44,94,46,0.2)" stroke-width="2"/><path d="M10 2a8 8 0 0 1 8 8" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+              Loading contacts…
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIPELINE TAB -->
+    <div id="tab-pipeline" style="display:none">
+      <div class="topbar">
+        <div class="topbar-title">Pipeline</div>
+        <div class="topbar-actions">
+          <button class="btn-primary" onclick="openAddDeal()">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Add deal
+          </button>
+        </div>
+      </div>
+      <div class="content">
+        <div id="pipeline-board" class="pipeline-board"></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- CONTACT PANEL -->
+<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
+<div class="contact-panel" id="contact-panel">
+  <div class="panel-head">
+    <div style="font-size:0.9rem;font-weight:700" id="panel-title">Contact</div>
+    <button class="panel-close" onclick="closePanel()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<!-- ADD CONTACT MODAL -->
+<div class="modal-overlay" id="add-contact-modal">
+  <div class="modal">
+    <div class="modal-title">Add contact</div>
+    <div class="modal-fields">
+      <div class="modal-row">
+        <div class="modal-field"><label class="modal-label">First name</label><input class="modal-input" id="ac-first" placeholder="Te Koha"></div>
+        <div class="modal-field"><label class="modal-label">Last name</label><input class="modal-input" id="ac-last" placeholder="Tūhoe"></div>
+      </div>
+      <div class="modal-field"><label class="modal-label">Email</label><input class="modal-input" id="ac-email" type="email" placeholder="contact@example.com"></div>
+      <div class="modal-row">
+        <div class="modal-field"><label class="modal-label">Phone</label><input class="modal-input" id="ac-phone" placeholder="+64 21…"></div>
+        <div class="modal-field"><label class="modal-label">Company</label><input class="modal-input" id="ac-company" placeholder="Optional"></div>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Tag</label>
+        <select class="modal-input" id="ac-tag">
+          <option value="">No tag</option>
+          <option value="lead">Lead</option>
+          <option value="customer">Customer</option>
+          <option value="wholesale">Wholesale</option>
+          <option value="vip">VIP</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('add-contact-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveContact()">Save contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD DEAL MODAL -->
+<div class="modal-overlay" id="add-deal-modal">
+  <div class="modal">
+    <div class="modal-title">Add deal</div>
+    <div class="modal-fields">
+      <div class="modal-field"><label class="modal-label">Deal title</label><input class="modal-input" id="ad-title" placeholder="e.g. Wholesale — Auckland FC"></div>
+      <div class="modal-row">
+        <div class="modal-field"><label class="modal-label">Contact name</label><input class="modal-input" id="ad-contact-name" placeholder="Optional"></div>
+        <div class="modal-field"><label class="modal-label">Contact email</label><input class="modal-input" id="ad-contact-email" placeholder="Optional"></div>
+      </div>
+      <div class="modal-row">
+        <div class="modal-field"><label class="modal-label">Value ($)</label><input class="modal-input" id="ad-value" type="number" placeholder="0"></div>
+        <div class="modal-field">
+          <label class="modal-label">Stage</label>
+          <select class="modal-input" id="ad-stage">
+            <option value="lead">Lead</option>
+            <option value="contacted">Contacted</option>
+            <option value="quoted">Quoted</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-field"><label class="modal-label">Notes</label><input class="modal-input" id="ad-notes" placeholder="Optional"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('add-deal-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveDeal()">Save deal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const AVATAR_COLORS = ['#2C5E2E','#B8893A','#2980b9','#8e44ad','#c0392b','#16a085','#d35400'];
+  const STAGES = ['lead','contacted','quoted','won','lost'];
+  const STAGE_LABELS = { lead:'Lead', contacted:'Contacted', quoted:'Quoted', won:'Won', lost:'Lost' };
+
+  let token = sessionStorage.getItem('crm-token') || '';
+  let allContacts = [];
+  let activeFilter = 'all';
+  let pipelineDeals = [];
+
+  // ── Auth ──
+  if (token) showShell();
+
+  document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  document.getElementById('login-btn').addEventListener('click', login);
+
+  async function login() {
+    const pw = document.getElementById('pw').value;
+    const res = await fetch('/api/admin-orders', { headers: { 'X-Admin-Token': pw } });
+    if (res.ok || res.status === 200) {
+      token = pw;
+      sessionStorage.setItem('crm-token', pw);
+      showShell();
+    } else {
+      document.getElementById('login-error').classList.add('show');
+    }
+  }
+
+  function showShell() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('shell').classList.add('visible');
+    loadContacts();
+  }
+
+  function logout() {
+    sessionStorage.removeItem('crm-token');
+    token = '';
+    location.reload();
+  }
+
+  // ── Tabs ──
+  function switchTab(tab) {
+    ['contacts','pipeline'].forEach(t => {
+      document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
+      document.querySelector(`[data-tab="${t}"]`).classList.toggle('active', t === tab);
+    });
+    if (tab === 'pipeline') loadPipeline();
+  }
+
+  // ── Contacts ──
+  async function loadContacts() {
+    const res = await fetch('/api/crm-contacts', { headers: { 'X-Admin-Token': token } });
+    allContacts = await res.json();
+    renderContactStats();
+    renderContacts();
+  }
+
+  function avatarColor(name) {
+    let h = 0;
+    for (const c of (name || 'A')) h = (h * 31 + c.charCodeAt(0)) % AVATAR_COLORS.length;
+    return AVATAR_COLORS[h];
+  }
+
+  function initials(name) {
+    const parts = (name || '?').trim().split(' ');
+    return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-NZ', { day:'numeric', month:'short', year:'numeric' });
+  }
+
+  function renderContactStats() {
+    const total = allContacts.length;
+    const customers = allContacts.filter(c => c.order_count > 0).length;
+    const revenue = allContacts.reduce((s, c) => s + (c.total_spent || 0), 0);
+    const avgOrder = customers > 0 ? revenue / allContacts.reduce((s,c) => s + (c.order_count||0), 0) : 0;
+    document.getElementById('contact-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Total Contacts</div><div class="stat-value">${total}</div></div>
+      <div class="stat-card"><div class="stat-label">Customers</div><div class="stat-value">${customers}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value">$${revenue.toFixed(0)}</div><div class="stat-sub">NZD</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Order</div><div class="stat-value">$${avgOrder.toFixed(0)}</div><div class="stat-sub">NZD</div></div>`;
+  }
+
+  function setFilter(f, el) {
+    activeFilter = f;
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    renderContacts();
+  }
+
+  function filterContacts() { renderContacts(); }
+
+  function renderContacts() {
+    const q = document.getElementById('contact-search').value.toLowerCase();
+    let list = allContacts.filter(c => {
+      const matchQ = !q || c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q);
+      const matchF = activeFilter === 'all' || (c.tags || []).includes(activeFilter) || (activeFilter === 'customer' && c.order_count > 0);
+      return matchQ && matchF;
+    });
+
+    document.getElementById('contact-count').textContent = `${list.length} contact${list.length !== 1 ? 's' : ''}`;
+
+    if (!list.length) {
+      document.getElementById('contacts-table-wrap').innerHTML = `<table><tbody><tr class="empty-row"><td colspan="6">No contacts found</td></tr></tbody></table>`;
+      return;
+    }
+
+    document.getElementById('contacts-table-wrap').innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Name</th><th>Tags</th><th>Company</th><th>Orders</th><th>Total Spent</th><th>Last Order</th>
+        </tr></thead>
+        <tbody>
+          ${list.map(c => `
+            <tr onclick="openContact('${c.email}')">
+              <td><div class="contact-cell">
+                <div class="avatar" style="background:${avatarColor(c.name || c.email)}">${initials(c.name || c.email)}</div>
+                <div><div class="contact-name">${c.first_name || c.name || '—'} ${c.last_name || ''}</div>
+                <div class="contact-email">${c.email}</div></div>
+              </div></td>
+              <td><div class="tag-list">${(c.tags||[]).map(t => `<span class="tag ${t}">${t}</span>`).join('') || '—'}</div></td>
+              <td style="color:var(--muted);font-size:0.82rem">${c.company || '—'}</td>
+              <td>${c.order_count || 0}</td>
+              <td style="font-weight:600">${c.total_spent ? '$' + c.total_spent.toFixed(2) : '—'}</td>
+              <td style="color:var(--muted);font-size:0.82rem">${fmtDate(c.last_order_at)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // ── Contact panel ──
+  let panelContact = null;
+  let panelNotes = [];
+  let panelOrders = [];
+  let panelTags = [];
+
+  async function openContact(email) {
+    const c = allContacts.find(x => x.email === email);
+    if (!c) return;
+    panelContact = c;
+    panelTags = [...(c.tags || [])];
+    document.getElementById('panel-title').textContent = c.first_name || c.name || c.email;
+    document.getElementById('panel-overlay').classList.add('open');
+    document.getElementById('contact-panel').classList.add('open');
+    document.getElementById('panel-body').innerHTML = `<div class="loading"><svg class="spin" width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="rgba(44,94,46,0.2)" stroke-width="2"/><path d="M9 2a7 7 0 0 1 7 7" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg> Loading…</div>`;
+
+    const [notesRes, ordersRes] = await Promise.all([
+      fetch(`/api/crm-notes?email=${encodeURIComponent(email)}`, { headers: { 'X-Admin-Token': token } }),
+      fetch(`/api/admin-orders`, { headers: { 'X-Admin-Token': token } }),
+    ]);
+    panelNotes = await notesRes.json();
+    const allOrders = await ordersRes.json();
+    panelOrders = (Array.isArray(allOrders) ? allOrders : []).filter(o => o.customer_email?.toLowerCase() === email.toLowerCase());
+    renderPanel();
+  }
+
+  function renderPanel() {
+    const c = panelContact;
+    const name = [c.first_name || c.name?.split(' ')[0], c.last_name || c.name?.split(' ').slice(1).join(' ')].filter(Boolean).join(' ') || c.email;
+    const allTags = ['lead','customer','wholesale','vip'];
+
+    document.getElementById('panel-body').innerHTML = `
+      <!-- Profile -->
+      <div class="panel-section">
+        <div class="profile-header">
+          <div class="avatar-lg" style="background:${avatarColor(name)}">${initials(name)}</div>
+          <div>
+            <div class="profile-name">${name}</div>
+            <div class="profile-email">${c.email}</div>
+            ${c.phone ? `<div class="profile-phone">${c.phone}</div>` : ''}
+          </div>
+        </div>
+        <div class="profile-stats">
+          <div class="profile-stat"><div class="profile-stat-val">${c.order_count || 0}</div><div class="profile-stat-lbl">Orders</div></div>
+          <div class="profile-stat"><div class="profile-stat-val">$${(c.total_spent||0).toFixed(0)}</div><div class="profile-stat-lbl">Spent</div></div>
+          <div class="profile-stat"><div class="profile-stat-val">${c.order_count > 0 ? '$' + ((c.total_spent||0)/(c.order_count)).toFixed(0) : '—'}</div><div class="profile-stat-lbl">Avg order</div></div>
+        </div>
+      </div>
+
+      <!-- Edit -->
+      <div class="panel-section">
+        <div class="panel-section-title">Details</div>
+        <div class="field-edit">
+          <input id="pe-first" placeholder="First name" value="${c.first_name || c.name?.split(' ')[0] || ''}">
+          <input id="pe-last"  placeholder="Last name"  value="${c.last_name  || c.name?.split(' ').slice(1).join(' ') || ''}">
+          <input id="pe-phone" placeholder="Phone"      value="${c.phone || ''}">
+          <input id="pe-company" placeholder="Company"  value="${c.company || ''}">
+        </div>
+        <div class="tags-edit">
+          ${allTags.map(t => `<div class="tag-toggle ${panelTags.includes(t) ? 'on' : ''}" onclick="toggleTag('${t}',this)">${t}</div>`).join('')}
+        </div>
+        <div class="save-row"><button class="btn-save" onclick="saveContactEdits()">Save</button></div>
+      </div>
+
+      <!-- Orders -->
+      <div class="panel-section">
+        <div class="panel-section-title">Order history</div>
+        ${panelOrders.length ? panelOrders.map(o => `
+          <div class="order-row">
+            <div><div style="font-size:0.82rem;font-weight:500">${fmtDate(o.created_at)}</div>
+            <div class="order-row-id">${o.stripe_pi_id || o.id?.slice(0,8) || '—'}</div></div>
+            <div class="order-row-amount">$${parseFloat(o.total||0).toFixed(2)}</div>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:0.82rem">No orders yet</div>'}
+      </div>
+
+      <!-- Notes -->
+      <div class="panel-section">
+        <div class="panel-section-title">Notes</div>
+        <div class="notes-list" id="notes-list">
+          ${panelNotes.map(n => `
+            <div class="note-item" id="note-${n.id}">
+              <div class="note-content">${n.content.replace(/\n/g,'<br>')}</div>
+              <div class="note-time">${fmtDate(n.created_at)}</div>
+              <button class="note-del" onclick="deleteNote('${n.id}')">✕</button>
+            </div>`).join('') || '<div style="color:var(--muted);font-size:0.82rem">No notes yet</div>'}
+        </div>
+        <div class="note-form">
+          <textarea id="note-input" placeholder="Add a note…"></textarea>
+          <div><button class="btn-save" onclick="addNote()">Add note</button></div>
+        </div>
+      </div>`;
+  }
+
+  function toggleTag(tag, el) {
+    el.classList.toggle('on');
+    if (panelTags.includes(tag)) panelTags = panelTags.filter(t => t !== tag);
+    else panelTags.push(tag);
+  }
+
+  async function saveContactEdits() {
+    const payload = {
+      email: panelContact.email,
+      first_name: document.getElementById('pe-first').value,
+      last_name:  document.getElementById('pe-last').value,
+      phone:      document.getElementById('pe-phone').value,
+      company:    document.getElementById('pe-company').value,
+      tags:       panelTags,
+    };
+    await fetch('/api/crm-contacts', { method: 'PATCH', headers: { 'Content-Type':'application/json','X-Admin-Token':token }, body: JSON.stringify(payload) });
+    await loadContacts();
+    const updated = allContacts.find(c => c.email === panelContact.email);
+    if (updated) { panelContact = updated; panelTags = [...(updated.tags||[])]; }
+    renderPanel();
+  }
+
+  async function addNote() {
+    const content = document.getElementById('note-input').value.trim();
+    if (!content) return;
+    await fetch('/api/crm-notes', { method: 'POST', headers: { 'Content-Type':'application/json','X-Admin-Token':token }, body: JSON.stringify({ contact_email: panelContact.email, content }) });
+    document.getElementById('note-input').value = '';
+    const res = await fetch(`/api/crm-notes?email=${encodeURIComponent(panelContact.email)}`, { headers: { 'X-Admin-Token': token } });
+    panelNotes = await res.json();
+    renderPanel();
+  }
+
+  async function deleteNote(id) {
+    await fetch(`/api/crm-notes?id=${id}`, { method: 'DELETE', headers: { 'X-Admin-Token': token } });
+    panelNotes = panelNotes.filter(n => n.id !== id);
+    renderPanel();
+  }
+
+  function closePanel() {
+    document.getElementById('panel-overlay').classList.remove('open');
+    document.getElementById('contact-panel').classList.remove('open');
+  }
+
+  // ── Add contact ──
+  function openAddContact() { document.getElementById('add-contact-modal').classList.add('open'); }
+
+  async function saveContact() {
+    const tag = document.getElementById('ac-tag').value;
+    const payload = {
+      email: document.getElementById('ac-email').value.trim(),
+      first_name: document.getElementById('ac-first').value.trim(),
+      last_name:  document.getElementById('ac-last').value.trim(),
+      phone:      document.getElementById('ac-phone').value.trim(),
+      company:    document.getElementById('ac-company').value.trim(),
+      tags: tag ? [tag] : [],
+    };
+    if (!payload.email) return;
+    await fetch('/api/crm-contacts', { method: 'POST', headers: { 'Content-Type':'application/json','X-Admin-Token':token }, body: JSON.stringify(payload) });
+    closeModal('add-contact-modal');
+    ['ac-first','ac-last','ac-email','ac-phone','ac-company'].forEach(id => document.getElementById(id).value = '');
+    await loadContacts();
+  }
+
+  // ── Pipeline ──
+  async function loadPipeline() {
+    const res = await fetch('/api/crm-pipeline', { headers: { 'X-Admin-Token': token } });
+    pipelineDeals = await res.json();
+    renderPipeline();
+  }
+
+  function renderPipeline() {
+    const board = document.getElementById('pipeline-board');
+    board.innerHTML = STAGES.map(stage => {
+      const deals = pipelineDeals.filter(d => d.stage === stage);
+      const total = deals.reduce((s, d) => s + parseFloat(d.value||0), 0);
+      return `
+        <div class="pipeline-col stage-${stage}">
+          <div class="pipeline-col-head">
+            <div class="pipeline-col-label">${STAGE_LABELS[stage]}</div>
+            <div class="pipeline-col-count">${deals.length} deal${deals.length !== 1 ? 's' : ''} · $${total.toFixed(0)}</div>
+          </div>
+          <div class="pipeline-cards">
+            ${deals.map(d => `
+              <div class="deal-card">
+                <div class="deal-title">${d.title}</div>
+                ${d.contact_name ? `<div class="deal-contact">${d.contact_name}</div>` : ''}
+                ${d.value > 0 ? `<div class="deal-value">$${parseFloat(d.value).toFixed(2)}</div>` : ''}
+                <div class="deal-actions">
+                  ${stage !== STAGES[0] ? `<button class="deal-move" onclick="moveDeal('${d.id}','${STAGES[STAGES.indexOf(stage)-1]}')">← Back</button>` : ''}
+                  ${stage !== STAGES[STAGES.length-1] ? `<button class="deal-move" onclick="moveDeal('${d.id}','${STAGES[STAGES.indexOf(stage)+1]}')">Next →</button>` : ''}
+                  <button class="deal-move" style="margin-left:auto;color:var(--error)" onclick="deleteDeal('${d.id}')">Del</button>
+                </div>
+              </div>`).join('')}
+          </div>
+          <div class="pipeline-add">
+            <button class="pipeline-add-btn" onclick="openAddDeal('${stage}')">+ Add deal</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function moveDeal(id, stage) {
+    await fetch(`/api/crm-pipeline?id=${id}`, { method: 'PATCH', headers: { 'Content-Type':'application/json','X-Admin-Token':token }, body: JSON.stringify({ stage }) });
+    await loadPipeline();
+  }
+
+  async function deleteDeal(id) {
+    if (!confirm('Delete this deal?')) return;
+    await fetch(`/api/crm-pipeline?id=${id}`, { method: 'DELETE', headers: { 'X-Admin-Token': token } });
+    await loadPipeline();
+  }
+
+  function openAddDeal(stage = 'lead') {
+    document.getElementById('ad-stage').value = stage;
+    document.getElementById('add-deal-modal').classList.add('open');
+  }
+
+  async function saveDeal() {
+    const payload = {
+      title:         document.getElementById('ad-title').value.trim(),
+      contact_name:  document.getElementById('ad-contact-name').value.trim(),
+      contact_email: document.getElementById('ad-contact-email').value.trim(),
+      value:         parseFloat(document.getElementById('ad-value').value) || 0,
+      stage:         document.getElementById('ad-stage').value,
+      notes:         document.getElementById('ad-notes').value.trim(),
+    };
+    if (!payload.title) return;
+    await fetch('/api/crm-pipeline', { method: 'POST', headers: { 'Content-Type':'application/json','X-Admin-Token':token }, body: JSON.stringify(payload) });
+    closeModal('add-deal-modal');
+    ['ad-title','ad-contact-name','ad-contact-email','ad-value','ad-notes'].forEach(id => document.getElementById(id).value = '');
+    await loadPipeline();
+  }
+
+  // ── Helpers ──
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); } });
+</script>
+</body>
+</html>
