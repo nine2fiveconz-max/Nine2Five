@@ -385,6 +385,7 @@
     let ratesFetchDebounce = null;
     let discountCents = 0;
     let discountLabel = '';
+    let customerSyncDebounce = null;
     const cart = JSON.parse(localStorage.getItem('n2f-cart') || '[]');
 
     if (cart.length === 0) {
@@ -713,6 +714,7 @@
 
       if (clientSecret && rate) {
         await syncPaymentIntent();
+        syncCustomerData();
       }
     }
 
@@ -726,6 +728,35 @@
           body: JSON.stringify({ clientSecret, newAmount }),
         });
         if (elements) await elements.fetchUpdates();
+      } catch (_) {}
+    }
+
+    async function syncCustomerData() {
+      if (!clientSecret) return;
+      const firstName = document.getElementById('first-name').value.trim();
+      const lastName  = document.getElementById('last-name').value.trim();
+      const email     = document.getElementById('email').value.trim();
+      const phone     = document.getElementById('phone').value.trim();
+      const line1     = document.getElementById('address-line1').value.trim();
+      const line2     = document.getElementById('address-line2').value.trim();
+      const city      = document.getElementById('city').value.trim();
+      const postcode  = document.getElementById('postcode').value.trim();
+      const country   = document.getElementById('country').value;
+      if (!firstName || !lastName || !email || !line1 || !city) return;
+      try {
+        await fetch('/api/update-payment-intent?action=shipping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientSecret,
+            name: `${firstName} ${lastName}`,
+            email, phone,
+            address: { line1, line2, city, postcode },
+            country, shippingCents,
+            subtotalCents: baseAmountCents,
+            discountCents,
+          }),
+        });
       } catch (_) {}
     }
 
@@ -855,6 +886,17 @@
         document.getElementById(id).classList.remove('error');
         document.getElementById('error-msg').classList.remove('visible');
       });
+    });
+
+    ['first-name','last-name','email','phone','address-line1','address-line2','city','postcode'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        clearTimeout(customerSyncDebounce);
+        customerSyncDebounce = setTimeout(syncCustomerData, 1500);
+      });
+    });
+    document.getElementById('country').addEventListener('change', () => {
+      clearTimeout(customerSyncDebounce);
+      customerSyncDebounce = setTimeout(syncCustomerData, 500);
     });
   </script>
 
