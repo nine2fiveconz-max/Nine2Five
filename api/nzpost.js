@@ -1,8 +1,90 @@
-const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD;
-const ESHIP_API_KEY       = process.env.NZPOST_ESHIP_API_KEY;
-const ESHIP_BASE          = 'https://api.myeship.co/rest';
-const SUPABASE_URL        = process.env.SUPABASE_URL;
+const ADMIN_PASSWORD       = process.env.ADMIN_PASSWORD;
+const ESHIP_API_KEY        = process.env.NZPOST_ESHIP_API_KEY;
+const ESHIP_BASE           = 'https://api.myeship.co/rest';
+const SUPABASE_URL         = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+// Fixed per-item values for all eShip orders
+const UNIT_PRICE_NZD  = '20.00';
+const ITEM_WEIGHT_G   = '65';
+// Default package preset (18×28×5 cm, ~120 g)
+const DEFAULT_PARCEL  = { length: 18, width: 28, height: 5, distance_unit: 'cm', weight: 0.12, mass_unit: 'kg' };
+
+function buildEshipPayload(order) {
+  const addr  = order.shipping_address || {};
+  const items = Array.isArray(order.items) ? order.items : [];
+  const name  = [addr.first_name, addr.last_name].filter(Boolean).join(' ') || order.guest_email || 'Customer';
+  return {
+    address_from: {
+      name:    process.env.NZPOST_SENDER_NAME,
+      street1: process.env.NZPOST_SENDER_STREET,
+      city:    process.env.NZPOST_SENDER_CITY,
+      zip:     process.env.NZPOST_SENDER_POSTCODE,
+      country: 'NZ',
+      phone:   process.env.NZPOST_SENDER_PHONE,
+    },
+    address_to: {
+      name,
+      street1: addr.line1    || '',
+      street2: addr.line2    || '',
+      city:    addr.city     || '',
+      zip:     addr.postcode || '',
+      country: addr.country  || 'NZ',
+      phone:   addr.phone    || '',
+      email:   order.guest_email || '',
+    },
+    order_info: {
+      order_num:   String(order.id),
+      paid:        1,
+      status:      0,
+      total_price: order.total ? String((order.total / 100).toFixed(2)) : '0.00',
+      currency:    'NZD',
+    },
+    parcels: [DEFAULT_PARCEL],
+    items: items.length
+      ? items.map(item => ({
+          SKU:         `${item.name || ''} ${item.size || ''}`.trim(),
+          description: `${item.name || ''}${item.size ? ` – ${item.size}` : ''}`,
+          quantity:    item.qty || 1,
+          price:       UNIT_PRICE_NZD,
+          weight:      ITEM_WEIGHT_G,
+          currency:    'NZD',
+        }))
+      : [{ SKU: 'SOCKS', description: 'Socks', quantity: 1, price: UNIT_PRICE_NZD, weight: ITEM_WEIGHT_G, currency: 'NZD' }],
+  };
+}
+
+async function pushOrderToEship(order) {
+  const r = await fetch(`${ESHIP_BASE}/order`, {
+    method: 'POST',
+    headers: { 'Ocp-Apim-Subscription-Key': ESHIP_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildEshipPayload(order)),
+  });
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`eShip /order failed (${r.status}): ${text}`);
+  }
+  return r.json();
+}
+
+async function handlePushOrders(req, res) {
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/orders?status=eq.processing&select=*`,
+    { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
+  );
+  const orders = await r.json();
+  if (!Array.isArray(orders)) return res.status(500).json({ error: 'Failed to fetch orders', raw: orders });
+  const results = [];
+  for (const order of orders) {
+    try {
+      await pushOrderToEship(order);
+      results.push({ id: order.id, ok: true });
+    } catch (err) {
+      results.push({ id: order.id, ok: false, error: err.message });
+    }
+  }
+  return res.status(200).json({ pushed: results.length, results });
+}
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -67,7 +149,8 @@ module.exports = async function handler(req, res) {
   if (req.headers['x-admin-token'] !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorised' });
 
   const action = req.query?.action;
-  if (action === 'quote') return handleQuote(req, res);
-  if (action === 'ship')  return handleShip(req, res);
-  return res.status(400).json({ error: 'action must be quote or ship' });
+  if (action === 'quote')        return handleQuote(req, res);
+  if (action === 'ship')         return handleShip(req, res);
+  if (action === 'push_orders')  return handlePushOrders(req, res);
+  return res.status(400).json({ error: 'action must be quote, ship, or push_orders' });
 };

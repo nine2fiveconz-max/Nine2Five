@@ -83,6 +83,55 @@ module.exports = async function handler(req, res) {
     const shippingCents = pi.metadata?.shipping        ? parseInt(pi.metadata.shipping, 10)        : null;
     const discountCents = pi.metadata?.discount_amount ? parseInt(pi.metadata.discount_amount, 10) : null;
 
+    // Push order to NZ Post eShip (unit price $20, weight 65g, Default package)
+    try {
+      const eshipItems = items.length
+        ? items.map(item => ({
+            SKU:         `${item.name || ''} ${item.size || ''}`.trim(),
+            description: `${item.name || ''}${item.size ? ` – ${item.size}` : ''}`,
+            quantity:    item.qty || 1,
+            price:       '20.00',
+            weight:      '65',
+            currency:    'NZD',
+          }))
+        : [{ SKU: 'SOCKS', description: 'Socks', quantity: 1, price: '20.00', weight: '65', currency: 'NZD' }];
+      await fetch('https://api.myeship.co/rest/order', {
+        method: 'POST',
+        headers: { 'Ocp-Apim-Subscription-Key': process.env.NZPOST_ESHIP_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address_from: {
+            name:    process.env.NZPOST_SENDER_NAME,
+            street1: process.env.NZPOST_SENDER_STREET,
+            city:    process.env.NZPOST_SENDER_CITY,
+            zip:     process.env.NZPOST_SENDER_POSTCODE,
+            country: 'NZ',
+            phone:   process.env.NZPOST_SENDER_PHONE,
+          },
+          address_to: {
+            name:    customerName || customerEmail || 'Customer',
+            street1: shippingAddress?.line1    || '',
+            street2: shippingAddress?.line2    || '',
+            city:    shippingAddress?.city     || '',
+            zip:     shippingAddress?.postcode || '',
+            country: shippingAddress?.country  || 'NZ',
+            phone:   shippingAddress?.phone    || '',
+            email:   customerEmail || '',
+          },
+          order_info: {
+            order_num:   pi.id,
+            paid:        1,
+            status:      0,
+            total_price: (pi.amount_received / 100).toFixed(2),
+            currency:    'NZD',
+          },
+          parcels: [{ length: 18, width: 28, height: 5, distance_unit: 'cm', weight: 0.12, mass_unit: 'kg' }],
+          items: eshipItems,
+        }),
+      });
+    } catch (eshipErr) {
+      console.error('[webhook] eShip order push failed:', eshipErr.message);
+    }
+
     // Insert order
     try {
       await supabase('orders', 'POST', {
