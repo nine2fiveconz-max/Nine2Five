@@ -22,6 +22,14 @@
 - `api/nzpost.js` — added `?action=push_orders` handler + `buildEshipPayload()` helper. Fetches all `status=processing` orders from Supabase and pushes each to eShip. Same hardcoded values.
 - `admin.html` — added "Push to eShip" button in the header that calls `?action=push_orders` and alerts with results.
 
+### 3. Follow-up fixes and verification
+
+- **NZ free shipping for 7+ pairs** — `api/shipping-quote.js` `nzRate()` now returns `{ service: 'Free Standard', price: 0.00 }` for 7+ pairs (was a fallthrough returning undefined). `checkout.html` updated to render `$0` as "Free" in both the rate selector and order summary.
+- **`nzpost.js` order_num bug** — `buildEshipPayload()` was using `String(order.id)` as the eShip order number. Fixed to `String(order.order_number || order.id)` so the displayed order number in eShip matches the Supabase order number.
+- **Custom domain verified** — `nine2five.nz` → Vercel via Cloudflare DNS (A `76.76.21.21`). Updated in `PROJECT_CONTEXT.md`.
+- **`checkout.js` status confirmed** — Active, used for gift card purchases in `index.html`. Not legacy. Do not remove.
+- **CRM table schemas** — Could not verify (production Supabase project not accessible via MCP). Still UNKNOWN — ask Moo.
+
 ---
 
 ## Manual Steps Still Pending (for Moo)
@@ -76,7 +84,12 @@ Exactly 12 serverless functions in `api/`. Cannot add more top-level `.js` files
 Shell cannot `cd` to `~/Desktop` or read files there via Bash due to macOS privacy restrictions. Use `Read`/`Edit` tools directly for files on Desktop, or clone repos to `/tmp` or `~/projects`.
 
 ### `checkout.js` vs `payment-intent.js`
-There are two Stripe-related checkout initialisation files. `checkout.js` creates a Checkout Session (legacy). `payment-intent.js` creates a Payment Intent (current, used by `checkout.html`). The `checkout.js` file's usage is **UNKNOWN — ask Moo** whether it's still live anywhere.
+There are two Stripe-related checkout initialisation files. `checkout.js` creates a Checkout Session and is **active** — used for gift card purchases linked from `index.html`. `payment-intent.js` creates a Payment Intent (current main checkout flow used by `checkout.html`). Do not remove `checkout.js`.
+
+---
+
+### Supabase project discrepancy
+The Supabase MCP connects to project `dquwyyczsrxzbdtdemcc`, which has a completely different schema from what the deployed Nine2Five app expects (UUID `id` on orders instead of integer, no `inventory` table, no CRM tables). The production app uses `wfbwnkqevjibfdjqoifp` (configured via the `SUPABASE_URL` env var in Vercel). The MCP cannot access the production project. **Always use direct REST API calls with the service key** for any Nine2Five Supabase work — do not use the Supabase MCP tool for this repo.
 
 ---
 

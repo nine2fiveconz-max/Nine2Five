@@ -34,7 +34,7 @@ function buildEshipPayload(order) {
       email:   order.guest_email || '',
     },
     order_info: {
-      order_num:   String(order.id),
+      order_num:   String(order.order_number || order.id),
       paid:        1,
       status:      0,
       total_price: order.total ? String((order.total / 100).toFixed(2)) : '0.00',

@@ -428,7 +428,7 @@
         shippingRow = `<div class="total-row"><span>Shipping</span><span style="color:var(--muted)">Calculating…</span></div>`;
         total = subtotal;
       } else if (shippingRate) {
-        shippingRow = `<div class="total-row"><span>${shippingRate.label}</span><span style="color:var(--fg);font-weight:600">$${shippingRate.price.toFixed(2)} NZD</span></div>`;
+        shippingRow = `<div class="total-row"><span>${shippingRate.label}</span><span style="color:var(--fg);font-weight:600">${shippingRate.price === 0 ? 'Free' : '$' + shippingRate.price.toFixed(2) + ' NZD'}</span></div>`;
         total = subtotal + shippingRate.price;
       } else {
         shippingRow = `<div class="total-row"><span>Shipping</span><span style="color:var(--muted)">Select a shipping option</span></div>`;
@@ -691,7 +691,7 @@
             <div class="rate-name">${r.provider} — ${r.service}</div>
             ${r.estimated_days != null ? `<div class="rate-days">${r.estimated_days} business day${r.estimated_days !== 1 ? 's' : ''}</div>` : ''}
           </div>
-          <div class="rate-price">$${r.price.toFixed(2)}</div>
+          <div class="rate-price">${r.price === 0 ? 'Free' : '$' + r.price.toFixed(2)}</div>
         </div>`).join('')}
       </div>`;
 

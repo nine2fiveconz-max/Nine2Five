@@ -32,7 +32,7 @@ ea0ee08 Remove packaging size names from NZ shipping labels
 ## Deployment
 
 - **Host:** Vercel (Hobby plan — hard limit of 12 serverless functions)
-- **Domain:** `nine2five-sage.vercel.app` (confirmed in `api/checkout.js:17`). Custom domain — **UNKNOWN — ask Moo** (not in code).
+- **Domain:** `nine2five.nz` (custom) + `nine2five-sage.vercel.app` (Vercel default). DNS via Cloudflare (ns: `kolton.ns.cloudflare.com` / `april.ns.cloudflare.com`), A record → `76.76.21.21` (Vercel).
 - **Deploy trigger:** push to `main` auto-deploys via Vercel GitHub integration.
 - **Function count:** exactly 12 files in `api/` — do not add more top-level API files without removing one first.
 
@@ -80,7 +80,7 @@ ea0ee08 Remove packaging size names from NZ shipping labels
 | `admin-pos-order.js` | POST | `X-Admin-Token` | Log a POS (in-person) sale to Supabase, optionally decrement stock |
 | `crm.js` | GET+POST | `X-Admin-Token` | CRM actions: `contacts`, `contact_detail`, `pipeline`, `add_note`, `update_stage` |
 | `stock.js` | GET | none | Public endpoint — returns current stock levels from `inventory` (cached 60s) |
-| `checkout.js` | POST | none | Legacy Stripe Checkout Session creator (superseded by Payment Element in checkout.html — **UNKNOWN if still used**) |
+| `checkout.js` | POST | none | Stripe Checkout Session creator — **active**, used for gift card purchases linked from `index.html` (separate flow from the Payment Element in `checkout.html`) |
 
 ---
 
@@ -190,13 +190,15 @@ All set in Vercel project settings. No `.env` file in repo. No `.gitignore` exis
 | `stock` | decremented on order |
 
 #### `crm_contacts`
-Referenced in `crm.js`. Schema — **UNKNOWN — ask Moo**.
+Referenced in `crm.js`. Schema — **UNKNOWN — ask Moo**. Not present in the Supabase project visible via MCP (`dquwyyczsrxzbdtdemcc`); likely lives in the production project `wfbwnkqevjibfdjqoifp` which the MCP cannot reach.
 
 #### `crm_notes`
-Referenced in `crm.js` — `contact_email`, `created_at`. Full schema — **UNKNOWN — ask Moo**.
+Referenced in `crm.js` — `contact_email`, `created_at`. Full schema — **UNKNOWN — ask Moo**. Same project caveat as above.
 
 #### `crm_pipeline`
-Referenced in `crm.js`. Schema — **UNKNOWN — ask Moo**.
+Referenced in `crm.js`. Schema — **UNKNOWN — ask Moo**. Same project caveat as above.
+
+> **Supabase project note:** The MCP tool connects to `dquwyyczsrxzbdtdemcc` (a different project with a different schema — no `inventory` table, UUID `id` on orders, no CRM tables). The production app uses `wfbwnkqevjibfdjqoifp` (set via `SUPABASE_URL` env var in Vercel). Always use REST API calls with the service key for any Nine2Five Supabase operations — do not use the MCP tool for this project.
 
 ---
 
@@ -208,7 +210,7 @@ Referenced in `crm.js`. Schema — **UNKNOWN — ask Moo**.
 | 1–2 | $6.00 |
 | 3 | $7.00 |
 | 4–6 | $9.00 |
-| 7+ | **UNKNOWN — ask Moo** (code reads `if (qty <= 6)` then falls through) |
+| 7+ | Free Standard $0.00 |
 
 ### AU (qty-based)
 | Pairs | Price |

@@ -19,10 +19,10 @@ const INTERNATIONAL = {
 };
 
 function nzRate(qty) {
-  if (qty <= 2)  return { service: 'Standard', price: 6.00  };
-  if (qty === 3) return { service: 'Standard', price: 7.00  };
-  if (qty <= 6)  return { service: 'Standard', price: 9.00  };
-                 return { service: 'Standard', price: 16.00 };
+  if (qty <= 2)  return { service: 'Standard',      price: 6.00 };
+  if (qty === 3) return { service: 'Standard',      price: 7.00 };
+  if (qty <= 6)  return { service: 'Standard',      price: 9.00 };
+                 return { service: 'Free Standard',  price: 0.00 };
 }
 
 module.exports = async function handler(req, res) {
