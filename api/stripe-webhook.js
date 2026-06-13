@@ -132,6 +132,23 @@ module.exports = async function handler(req, res) {
       console.error('[webhook] eShip order push failed:', eshipErr.message);
     }
 
+    // ── Affiliate attribution (Phase 1) — look up before the order insert ──
+    // commission_rate is an INTEGER PERCENT in this schema (10 = 10%).
+    let affiliate = null;
+    const affiliateRef = pi.metadata?.affiliate_ref || null;
+    if (affiliateRef) {
+      try {
+        const rows = await supabase(
+          `affiliates?referral_code=ilike.${encodeURIComponent(affiliateRef)}&status=eq.active&select=id,referral_code,commission_rate`,
+          'GET'
+        );
+        if (rows && rows[0]) affiliate = rows[0];
+        else console.log(`[webhook] affiliate_ref '${affiliateRef}' not active/found — order proceeds unattributed`);
+      } catch (err) {
+        console.error('[webhook] affiliate lookup failed:', err.message);
+      }
+    }
+
     // Insert order
     try {
       await supabase('orders', 'POST', {
@@ -145,9 +162,52 @@ module.exports = async function handler(req, res) {
         shipping_address:      shippingAddress,
         items:                 items.length ? items : null,
         notes:                 customerName ? null : 'Address not captured — customer used express checkout',
+        affiliate_code:        affiliate ? affiliate.referral_code : null,
       });
     } catch (err) {
       if (!err.message.includes('duplicate')) console.error('Order insert error:', err.message);
+    }
+
+    // Record affiliate conversion (attributed orders only; never blocks the order)
+    if (affiliate) {
+      try {
+        const orderRows = await supabase(
+          `orders?stripe_payment_intent_id=eq.${encodeURIComponent(pi.id)}&select=id,affiliate_conversion_id`,
+          'GET'
+        );
+        const order = orderRows && orderRows[0] ? orderRows[0] : null;
+        if (order && !order.affiliate_conversion_id) {
+          // Commission base = subtotal (excl. shipping/discount); fall back to items if metadata.subtotal absent
+          const baseCents = subtotalCents != null
+            ? subtotalCents
+            : items.reduce((s, i) => s + Math.round((i.price || 0) * 100) * (i.qty || 1), 0);
+          const rate = Number(affiliate.commission_rate) || 0;   // integer percent, e.g. 10 = 10%
+          const commissionCents = Math.round(baseCents * rate / 100);
+          // Insert conversion — unique index on order_id makes this retry-safe
+          try {
+            await supabase('affiliate_conversions', 'POST', {
+              affiliate_id:      affiliate.id,
+              order_id:          order.id,
+              order_total_cents: baseCents,
+              commission_cents:  commissionCents,
+              status:            'pending',
+            });
+          } catch (e) {
+            if (!/duplicate|unique/i.test(e.message)) throw e;
+          }
+          // Link the conversion back onto the order (covers fresh insert and prior partial run)
+          const convRows = await supabase(
+            `affiliate_conversions?order_id=eq.${order.id}&select=id`,
+            'GET'
+          );
+          const conversionId = convRows && convRows[0] ? convRows[0].id : null;
+          if (conversionId) {
+            await supabase(`orders?id=eq.${order.id}`, 'PATCH', { affiliate_conversion_id: conversionId });
+          }
+        }
+      } catch (err) {
+        console.error('[webhook] affiliate conversion failed:', err.message);
+      }
     }
 
     // Decrement inventory
