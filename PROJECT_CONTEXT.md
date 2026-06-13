@@ -162,11 +162,7 @@ All set in Vercel project settings. No `.env` file in repo. No `.gitignore` exis
 #### `orders`
 | Column | Type | Source |
 |---|---|---|
-| `id` | **uuid** (PK, `gen_random_uuid()`) — NOT an integer | auto |
-| `order_number` | integer (`nextval('order_number_seq')`, UNIQUE) — the human-facing order number; latest ~1071 | auto |
-| `customer_id` | uuid (nullable FK) | — |
-| `affiliate_code` | text (nullable) — referral code that attributed the sale | webhook (Phase 1) |
-| `affiliate_conversion_id` | uuid (nullable FK → `affiliate_conversions`) | webhook (Phase 1) |
+| `id` | integer (auto-increment, used as order number in eShip) | auto |
 | `stripe_payment_intent_id` | text | webhook |
 | `guest_email` | text | webhook |
 | `status` | text | `'processing'` on create; `'shipped'` after label |
@@ -193,19 +189,16 @@ All set in Vercel project settings. No `.env` file in repo. No `.gitignore` exis
 | `size` | match key |
 | `stock` | decremented on order |
 
-#### CRM tables — name mismatch (verified 2026-06-14)
-`crm.js` references `crm_contacts`, `crm_notes`, `crm_pipeline`. **These table names do NOT exist** in the production project. What *does* exist is a CRM-style set named differently: `customers`, `customer_notes`, `customer_tags`. **This means `crm.js` is likely querying non-existent tables — flag for investigation** (out of scope for the affiliate work).
+#### `crm_contacts`
+Referenced in `crm.js`. Schema — **UNKNOWN — ask Moo**. Not present in the Supabase project visible via MCP (`dquwyyczsrxzbdtdemcc`); likely lives in the production project `wfbwnkqevjibfdjqoifp` which the MCP cannot reach.
 
-#### Affiliate system tables — THESE EXIST in production (verified 2026-06-14)
-The production project `wfbwnkqevjibfdjqoifp` already contains a full affiliate schema (all `uuid` PKs):
+#### `crm_notes`
+Referenced in `crm.js` — `contact_email`, `created_at`. Full schema — **UNKNOWN — ask Moo**. Same project caveat as above.
 
-- **`affiliates`** — `id, user_id, email(uniq), name, referral_code(uniq), commission_rate (integer PERCENT, default 10 = 10%), status('pending'/'active'), stripe_account_id, total_clicks, total_conversions, total_commission_cents, total_paid_cents, notes, created_at, approved_at`. Has real rows (incl. `wiremubartlett`, active).
-- **`affiliate_conversions`** — the commissions table: `id, affiliate_id→affiliates, order_id→orders, order_total_cents, commission_cents, status('pending'), created_at`. Phase 1 webhook writes here. Unique index on `order_id` (retry-safe).
-- **`affiliate_clicks`** — `id, affiliate_id, ip_address, user_agent, referrer, landing_page, created_at` (Phase 2 — not written yet).
-- **`affiliate_payouts`** — payout batches (Phase 2+).
-- **`ambassador_applications`** — large signup-form table (Phase 2 signup target).
+#### `crm_pipeline`
+Referenced in `crm.js`. Schema — **UNKNOWN — ask Moo**. Same project caveat as above.
 
-> **Supabase project note (corrected 2026-06-14):** Earlier docs claimed the production project had integer `orders.id` and no CRM/affiliate tables — **both wrong**. Production (`wfbwnkqevjibfdjqoifp`) has `uuid` `orders.id`, a `customers`/`customer_notes`/`customer_tags` CRM set, and the full affiliate schema above. The plugin **Supabase MCP** connects to a *different* org/project (`dquwyyczsrxzbdtdemcc`) and cannot reach production. For DDL on production use the **Management API** with a Supabase personal access token (`sbp_…`); for CRUD use REST with the service key.
+> **Supabase project note:** The MCP tool connects to `dquwyyczsrxzbdtdemcc` (a different project with a different schema — no `inventory` table, UUID `id` on orders, no CRM tables). The production app uses `wfbwnkqevjibfdjqoifp` (set via `SUPABASE_URL` env var in Vercel). Always use REST API calls with the service key for any Nine2Five Supabase operations — do not use the MCP tool for this project.
 
 ---
 

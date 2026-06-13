@@ -453,7 +453,7 @@
         const res = await fetch('/api/payment-intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: cart, ref: localStorage.getItem('n2f-ref') || undefined }),
+          body: JSON.stringify({ items: cart }),
         });
         const { clientSecret: cs, error } = await res.json();
         if (error) throw new Error(error);

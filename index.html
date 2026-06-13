@@ -1143,19 +1143,6 @@
   </div>
 
   <script>
-    // ── Affiliate referral capture (first-touch, 60 days) ──
-    (function captureRef() {
-      try {
-        const raw = new URLSearchParams(window.location.search).get('ref');
-        if (!raw) return;
-        const code = raw.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
-        if (!code) return;
-        if (localStorage.getItem('n2f-ref')) return;   // already set — don't overwrite (first-touch wins)
-        localStorage.setItem('n2f-ref', code);
-        document.cookie = `n2f-ref=${code}; max-age=${60 * 24 * 60 * 60}; path=/; SameSite=Lax`;
-      } catch (_) {}
-    })();
-
     // Nav scroll effect
     const navbar = document.getElementById('navbar');
     window.addEventListener('scroll', () => {

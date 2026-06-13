@@ -88,15 +88,8 @@ There are two Stripe-related checkout initialisation files. `checkout.js` create
 
 ---
 
-### Supabase project discrepancy (corrected 2026-06-14)
-The plugin Supabase MCP connects to project `dquwyyczsrxzbdtdemcc` (a different org) and **cannot reach production** (`wfbwnkqevjibfdjqoifp`, set via `SUPABASE_URL` in Vercel).
-
-**Earlier handover notes about production were wrong.** Verified directly against production on 2026-06-14:
-- `orders.id` is **`uuid`** (`gen_random_uuid()`), NOT integer. The integer human order number is a separate column, **`order_number`** (`nextval('order_number_seq')`, latest ~1071).
-- Production **does** contain CRM-style tables (`customers`, `customer_notes`, `customer_tags`) and a **full affiliate schema** (`affiliates`, `affiliate_conversions`, `affiliate_clicks`, `affiliate_payouts`, `ambassador_applications`). See PROJECT_CONTEXT.md.
-- Note: `crm.js` references `crm_contacts`/`crm_notes`/`crm_pipeline`, which **do not exist** under those names — likely a latent bug, separate from the affiliate work.
-
-For production DDL use the **Management API** with a Supabase personal access token (`sbp_…`). For CRUD use REST with the service key. Do not rely on the Supabase MCP for this repo.
+### Supabase project discrepancy
+The Supabase MCP connects to project `dquwyyczsrxzbdtdemcc`, which has a completely different schema from what the deployed Nine2Five app expects (UUID `id` on orders instead of integer, no `inventory` table, no CRM tables). The production app uses `wfbwnkqevjibfdjqoifp` (configured via the `SUPABASE_URL` env var in Vercel). The MCP cannot access the production project. **Always use direct REST API calls with the service key** for any Nine2Five Supabase work — do not use the Supabase MCP tool for this repo.
 
 ---
 
