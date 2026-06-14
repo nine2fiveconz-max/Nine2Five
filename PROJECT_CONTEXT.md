@@ -6,6 +6,10 @@
 
 > **2026-06-15 — Affiliate fixes shipped to prod (nine2five-store, commit `3d421e1`):** (1) Click counter fixed — dashboard/admin now count real `affiliate_clicks`/`affiliate_conversions` rows instead of the drift-prone `total_clicks` counter, the track route awaits its increment, and counters were backfilled (`wiremubartlett→12`, `moo→3`). (2) `affiliate_code` is now set on the PaymentIntent **server-side at creation** from the `n2f_ref` cookie (express/Link can't bypass it), and the cookie is scoped `Domain=.nine2five.nz` (carries www↔apex). (3) **Open bug:** pure express/Link checkout still creates orders missing items/email/shipping (order metadata only set by the client PATCH) — see HANDOVER.md.
 
+> **2026-06-15 — Visitor tracking fixed (nine2five-store):** the `public.site_sessions` table (written by `api/analytics/ping`, read by `api/admin/live-stats`) was **missing in prod** — every ping 500'd so the dashboard showed 0 live / 0 today. Added by migration **`014_site_sessions.sql`** (applied to prod `wfbwnkqevjibfdjqoifp`, verified). No app code changed.
+
+> 🔁 **Recurring pattern — "code shipped ahead of schema":** features have referenced prod DB columns/tables that were never migrated — `affiliates.terms_accepted_at` (migration 013) and `site_sessions` (migration 014). **Before shipping code that writes a new column/table, confirm it exists in prod `wfbwnkqevjibfdjqoifp`.** Migrations in `nine2five-store/supabase/migrations/` are not auto-applied — run them manually (Management API / `sbp_` token).
+
 ---
 
 ## Repo

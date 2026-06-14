@@ -24,6 +24,22 @@
 
 ---
 
+## 2026-06-15 — Visitor tracking fix: `site_sessions` table was missing in prod (nine2five-store)
+
+> Symptom: admin dashboard showed **0 LIVE / 0 visitors today** and a blank conversion rate ("awaiting session data").
+
+- **Root cause:** `api/analytics/ping` (visitor write, via `sendBeacon` from `components/storefront/visitor-tracker.tsx`) upserts into `public.site_sessions`, and `api/admin/live-stats` reads counts from it — but **`site_sessions` was never created by any migration**. Every ping returned 500 ("Could not find the table 'public.site_sessions'"), so no rows were ever written and the dashboard counts fell back to 0 / `tracking_error`. (The write itself was correctly *awaited* — NOT the fire-and-forget pattern.)
+- **Fix:** new migration **`supabase/migrations/014_site_sessions.sql`** creates `site_sessions (session_id text PK, page text, last_seen timestamptz default now(), created_at timestamptz default now())` + indexes on `last_seen` and `created_at`. Columns match the ping upsert + live-stats counts exactly; **no app code changed**. Applied to prod `wfbwnkqevjibfdjqoifp` via the Management API; migration file on branch `fix-site-sessions-table` (PR #2).
+- **Verified:** live `POST /api/analytics/ping` went 500 → **200 `{ok:true}`**, a row was written (defaults populated), and the live-stats count queries returned `live_now/today/month` with no error. Test row cleaned up (table back to 0, ready for real traffic).
+
+### ⚠️ Recurring pattern: "code shipped ahead of schema"
+This is the **third** instance of frontend/code referencing a DB column/table that was never migrated to prod:
+1. `/join` signup → `affiliates.terms_accepted_at` missing (fixed, migration 013).
+2. Visitor tracking → `site_sessions` table missing (fixed, migration 014).
+3. (Watch) any new column/table a feature writes — **confirm it exists in prod `wfbwnkqevjibfdjqoifp` before shipping.** Migrations in `nine2five-store/supabase/migrations/` are NOT auto-applied by Vercel; they must be run against prod manually (Management API / `sbp_` token).
+
+---
+
 ## What Was Completed This Session
 
 ### 1. Stripe Link shipping bypass fix
