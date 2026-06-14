@@ -2,6 +2,10 @@
 
 > Verified by reading files and running commands. Anything unverifiable is marked **UNKNOWN — ask Moo**.
 
+> ⚠️ **This file documents the static prototype (`nine2fiveconz-max/Nine2Five`), which is NOT the live store.** The live customer site nine2five.nz is the Next.js repo **`scaledsolutionsnz-sketch/nine2five-store`** (Vercel project `nine2five-store`, scaled-solutions). Do affiliate/store work there. See HANDOVER.md.
+
+> **2026-06-15 — Affiliate fixes shipped to prod (nine2five-store, commit `3d421e1`):** (1) Click counter fixed — dashboard/admin now count real `affiliate_clicks`/`affiliate_conversions` rows instead of the drift-prone `total_clicks` counter, the track route awaits its increment, and counters were backfilled (`wiremubartlett→12`, `moo→3`). (2) `affiliate_code` is now set on the PaymentIntent **server-side at creation** from the `n2f_ref` cookie (express/Link can't bypass it), and the cookie is scoped `Domain=.nine2five.nz` (carries www↔apex). (3) **Open bug:** pure express/Link checkout still creates orders missing items/email/shipping (order metadata only set by the client PATCH) — see HANDOVER.md.
+
 ---
 
 ## Repo

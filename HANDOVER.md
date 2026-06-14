@@ -1,6 +1,26 @@
 # Nine2Five — Session Handover
 
-> State as of 2026-06-11. Pick up from here in the next session.
+> State as of 2026-06-15. Pick up from here in the next session.
+
+---
+
+## 2026-06-15 — Affiliate system fixes (LIVE repo: `scaledsolutionsnz-sketch/nine2five-store`)
+
+> The affiliate system lives in the **nine2five-store** Next.js repo (serves nine2five.nz), NOT this static prototype. The work below was done there and is **now live in production** (merged PR #1 → `main`, commit `3d421e1`, prod build green).
+
+### Click counter fix (symptom: dashboard showed 0 clicks despite real traffic)
+- **Root cause:** `src/app/api/affiliates/track/route.ts` fired the click insert + `increment_affiliate_clicks` RPC *after* the HTTP response (fire-and-forget `.then()`), so Vercel froze the function before it ran → `affiliates.total_clicks` never incremented. Both the affiliate dashboard and admin displayed that broken counter (16 real `affiliate_clicks` rows, counters all 0).
+- **Fix:**
+  - `track/route.ts`: **awaited** the insert + increment before responding.
+  - `affiliate/dashboard/page.tsx` + `api/admin/affiliates/route.ts`: display clicks/conversions/commission **derived from the actual `affiliate_clicks` / `affiliate_conversions` rows** (single source of truth), overriding the cached counter server-side.
+  - **Backfill** (idempotent, on prod data): `total_clicks` set to real counts — `wiremubartlett 0→12`, `moo 0→3`; conversions/commission all 0 (none yet).
+
+### Checkout attribution hardening (dual-path)
+- `create-payment-intent`: now reads the `n2f_ref` cookie **server-side** and sets `metadata.affiliate_code` at PaymentIntent **creation** (not only the client PATCH), so Stripe Link / wallet express checkout can't bypass attribution. PATCH prefers the server cookie too.
+- `affiliate-tracker.tsx`: `n2f_ref` cookie now `Domain=.nine2five.nz` + `Secure` in prod (carries across **www ↔ apex**); host-only on preview/localhost. `SameSite=Lax`, 30-day unchanged.
+
+### NEW OPEN ITEM (NOT fixed — recorded so it isn't lost)
+**Pure express / Stripe Link checkout produces orders missing line items, email, and shipping address.** The order-building metadata (`items`, `email`, `shippingAddress`) is only set by the client `handleSubmit` PATCH, not at PI creation. If a buyer confirms via an express/Link button that skips `handleSubmit`, the webhook builds an order with no `order_items`, empty `guest_email`, and empty `shipping_address`. (Affiliate `affiliate_code` + `subtotal` *are* now set at creation, so attribution/commission survive — but the order record is incomplete.) Fix: set items/email/shipping server-side at creation or via a dedicated express-checkout handler. Same class as the prototype's old Stripe Link bypass.
 
 ---
 
