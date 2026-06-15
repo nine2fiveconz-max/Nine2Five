@@ -40,6 +40,22 @@ This is the **third** instance of frontend/code referencing a DB column/table th
 
 ---
 
+## 2026-06-15 — Admin Affiliates: delete (soft-delete) + dashboard RLS fix + layout (nine2five-store)
+
+> All live in prod. Earlier 2026-06-15 fix: the affiliate **dashboard** showed 0 clicks because the row-count read ran through `createServiceClient` (@supabase/ssr), which inherits the logged-in user's JWT and runs under RLS — `affiliate_clicks` has no SELECT policy for a regular affiliate. Fixed by reading counts via a **true service-role client** (no cookies) + added a Refresh button (prod commit `c9c22de`). See the `createServiceClient` footgun note in memory.
+
+### Affiliate delete = SOFT-DELETE (archive), not hard-delete
+- The admin Affiliates page (`/admin/affiliates`) had a `DELETE` that **hard-deleted**. That's unsafe: `affiliate_clicks` FK is **ON DELETE CASCADE** (would destroy the affiliate's tracked clicks), and `affiliate_conversions`/`affiliate_payouts` are **ON DELETE RESTRICT** (blocks deletion). 
+- Now **soft-delete**: the per-row **Archive** action opens a confirm dialog showing the affiliate's **attached clicks + conversions counts**, then sets `affiliates.archived_at` (migration **`015_affiliate_archived_at.sql`**, applied to prod). The list GET filters `archived_at is null`. Tracking data is **preserved**; reversible (clear `archived_at`). Admin-only + audit-logged (`affiliate.archived`). Verified: archiving kept the click rows intact and hid the row. Prod commit `b302114`.
+
+### Layout polish
+- Affiliates table: consistent 20px horizontal padding (header + cells align), taller/comfortable rows (18px vertical), tidied header + KPI-card padding. Visual only — data/columns unchanged.
+
+### ⚠️ Still TODO (separate admin decision): dedupe duplicate affiliates
+There are duplicate affiliate records — **two Gene Bartlett** (`gbartlett`, `genebartlett`) and **two Wiremu** (`moo` ~9 clicks, `wiremubartlett` 12 clicks). NOT merged/deleted automatically. Decide which to keep; archiving the other now preserves its clicks (no orphaning). True merge (reassigning clicks/conversions to the kept affiliate) would need a separate migration/script.
+
+---
+
 ## What Was Completed This Session
 
 ### 1. Stripe Link shipping bypass fix
